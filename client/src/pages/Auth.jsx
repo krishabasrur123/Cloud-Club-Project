@@ -7,8 +7,6 @@ import pencil from "../assets/pencil.png";
 import lightbulb from "../assets/light.png";
 import clock from "../assets/clock.png";
 
-import { api, setSession } from "../lib/api";
-
 export default function Auth() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -22,14 +20,25 @@ export default function Auth() {
     setLoading(true);
 
     try {
-      const res = await api.login({ email, password });
-
-      setSession({
-        token: res.token,
-        user: { _id: res._id, name: res.name, email: res.email },
+      const res = await fetch("http://127.0.0.1:5001/api/users/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       });
 
-      navigate("/dashboard");
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Login failed");
+      }
+
+      localStorage.setItem("token", data.token);
+      localStorage.setItem(
+        "user",
+        JSON.stringify({ _id: data._id, name: data.name, email: data.email })
+      );
+
+      navigate("/dashboard"); 
     } catch (err) {
       setError(err.message);
     } finally {
@@ -39,11 +48,14 @@ export default function Auth() {
 
   return (
     <div className="authPage">
-
       <div className="topNav">
         <button className="pill active">Login</button>
-        <button className="pill" onClick={() => navigate("/parser")}>Parser</button>
-        <button className="pill" onClick={() => navigate("/dashboard")}>Dashboard</button>
+        <button className="pill" onClick={() => navigate("/parser")}>
+          Parser
+        </button>
+        <button className="pill" onClick={() => navigate("/dashboard")}>
+          Dashboard
+        </button>
       </div>
 
       <img className="bgIcon bgClipboard" src={clipboard} alt="" />
@@ -82,17 +94,12 @@ export default function Auth() {
           </button>
         </form>
 
-        {/* NEW SECTION */}
         <p className="authSignupText">
           Don't have an account?{" "}
-          <span
-            className="authSignupLink"
-            onClick={() => navigate("/signup")}
-          >
+          <span className="authSignupLink" onClick={() => navigate("/signup")}>
             Create account
           </span>
         </p>
-
       </div>
     </div>
   );

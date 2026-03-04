@@ -20,30 +20,38 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function onSubmit(e) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+async function onSubmit(e) {
+  e.preventDefault();
+  setError("");
+  setLoading(true);
 
-    try {
-      // Use api.register if you added it in src/lib/api.js
-      const res = await api.register({ name, email, password });
+  try {
+    const res = await fetch("http://127.0.0.1:5001/api/users/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, password }),
+    });
 
-      // Expecting backend returns: { _id, name, email, token }
-      setSession({
-        token: res.token,
-        user: { _id: res._id, name: res.name, email: res.email },
-      });
+    const data = await res.json();
 
-      navigate("/dashboard");
-    } catch (err) {
-      // ✅ SHOW THE REAL ERROR
-      console.log("SIGNUP ERROR:", err);
-      setError(String(err?.message || err || "Signup failed"));
-    } finally {
-      setLoading(false);
+    if (!res.ok) {
+      throw new Error(data.message || "Signup failed");
     }
+
+    localStorage.setItem("token", data.token);
+    localStorage.setItem(
+      "user",
+      JSON.stringify({ _id: data._id, name: data.name, email: data.email })
+    );
+
+    navigate("/dashboard");
+  } catch (err) {
+    console.log("SIGNUP ERROR:", err);
+    setError(err.message || "Signup failed");
+  } finally {
+    setLoading(false);
   }
+}
 
   return (
     <div className="authPage">
