@@ -1,0 +1,89 @@
+.qmOverlay{
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.18);
+    display: grid;
+    place-items: center;
+    z-index: 9999;
+  }
+  
+  .qmCard{
+    width: min(520px, 92vw);
+    min-height: 260px;
+    background: #66b7cf;
+    border: 1px solid rgba(0,0,0,0.35);
+    border-radius: 8px;
+    box-shadow: 0 18px 45px rgba(0,0,0,0.25);
+    padding: 18px 18px 52px;
+    position: relative;
+  }
+  
+  .qmClose{
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: none;
+    background: rgba(255,255,255,0.22);
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: 900;
+  }
+  
+  .qmTitle{
+    font-weight: 900;
+    font-size: 12px;
+    color: rgba(0,0,0,0.75);
+    margin-bottom: 6px;
+  }
+  
+  .qmQuestion{
+    font-weight: 900;
+    font-size: 12px;
+    color: rgba(0,0,0,0.75);
+    margin-bottom: 10px;
+  }
+  
+  .qmOptions{
+    display: grid;
+    gap: 8px;
+  }
+  
+  .qmOpt{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(0,0,0,0.75);
+    cursor: pointer;
+  }
+  
+  .qmOpt input{
+    accent-color: #1f6d8a;
+  }
+  
+  .qmOpt.active span{
+    text-decoration: underline;
+  }
+  
+  .qmNext{
+    position: absolute;
+    bottom: 12px;
+    right: 14px;
+    width: 40px;
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid rgba(0,0,0,0.35);
+    background: rgba(255,255,255,0.30);
+    cursor: pointer;
+    font-size: 20px;
+    font-weight: 900;
+  }
+  
+  .qmNext:disabled{
+    opacity: 0.5;
+    cursor: not-allowed;
+  }

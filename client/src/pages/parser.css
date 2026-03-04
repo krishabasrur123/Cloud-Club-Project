@@ -1,156 +1,120 @@
-/* Full page */
-.parserPage {
-    min-height: 100vh;
-    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    background: #ffffff;
-  }
-  
-  /* Top bar */
-  .topNav {
-    background: #1f6d8a; /* teal bar */
-    height: 45px;
-    display: flex;
-    align-items: center;
-    padding: 0 12px;
-  }
-  
-  /* Pills sit on top bar */
-  .tabRow {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-  }
-  
-  /* Pill tab buttons */
-  .pillTab {
-    border: none;
-    text-transform: capitalize;
-    cursor: pointer;
-    padding: 10px 18px;
-    border-radius: 800px;
-    background: #8fc7da; /* light blue pill */
-    color: #183c63;
-    font-weight: 700;
-    box-shadow: 0 3px 0 rgba(0,0,0,0.18) inset, 0 3px 10px rgba(0,0,0,0.15);
-    transition: transform 120ms ease, filter 120ms ease;
-  }
-  
-  /* Active tab */
-  .pillTab.active {
-    background: #bfe3ef;
-    filter: saturate(1.05);
-  }
-  
-  /* Main frame area (the big white box in figma) */
-  .frame {
-    border: 2px solid rgba(0,0,0,0.5);
-    width: 100vw;
-    height: calc(100vh - 54px);
-    margin: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  
-    /* optional: if you later add a background illustration */
-    background: #ffffff;
-  }
-  
-  /* Blue panel (center) */
-  .panel {
-    width: 60%;          /* scale with screen */
-    height: 60%;
-    background: #cfefff;
-    border: 1px solid rgba(0, 0, 0, 0.25);
-    box-shadow: 0 18px 40px rgba(0,0,0,0.25);
-  
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 28px;
-  }
-  
-  /* Step text */
-  .stepText {
-    font-size: 3vw;
-    font-weight: 600;
-    color: rgba(0,0,0,0.35);
-    align-self: center;
-    justify-self: start;
-    margin-left: 125px;
-    text-shadow: 1px 1px 0 rgba(255,255,255,0.7);
-  }
-  
-  /* Drop zone */
-  .dropZone {
-    align-self: center;
-    justify-self: center;
-    width: 90%;
-    height: 80%;
-    background: rgba(220, 220, 220, 0.805);
-    border: 2px dashed rgba(0,0,0,0.35);
-    border-radius: 10px;
-    position: relative;  
-    display: flex;
-    place-items: center;
-  }
-  
-  /* Upload button */
-  .dropBtn {
-    position: absolute;
-    bottom: 10px;      
-    left: 50%;          
-    transform: translateX(-50%);    
-    border: none;
-    background: #1f6d8a;
-    color: white;
-    padding: 5px 5%;
-    border-radius: 600px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  
-  /* Filename */
-  .fileName {
-    font-weight: 700;
-    color: rgba(0,0,0,0.75);
-    padding: 0 10px;
-    text-align: center;
-  }
-  
-  /* Error */
-  .error {
-    grid-column: 1 / -1;
-    color: #b00020;
-    font-weight: 700;
-    margin-top: -8px;
-    text-align: center;
-  }
-  /* Make frame a positioning context */
-  .frame { position: relative; 
-    overflow: hidden;
+/* Make sure the top bar is full width and left aligned */
+.topNavFull{
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  transform: none;      
+  justify-content: flex-start;
+  padding-left: 18px;
+  height: 56px;
 }
 
-  .parserBg {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
+/* Parser card should be bigger like your figma */
+.authCardParser{
+  width: min(800px, 92vw);
+  min-height: 420px;
+  padding: 40px;
+  display: flex;
+  align-items: center;  
 }
-  
-  .panel { 
-    position: relative;
-    z-index: 1; 
+
+/* Inside layout: Step left + drop zone right */
+.parserInner{
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 34px;
+  align-items: center;
+
 }
-  
-  .pbg {
-    position: absolute;
-    opacity: 0.8;
-    width: 240px;
-  }
-  
-  
-  /* Corner positions */
-  .clipboard { top: 30px; left: 30px; }
-  .pencil { top:10px; right: 10px; }
-  .lightbulb { bottom: 5px; left: 5px; }
-  .clock { bottom: 1px; right: 20px; 
-    transform: rotate(-25deg)}
+
+/* Left side text */
+.parserStep{
+  font-size: 52px;
+  font-weight: 900;
+  color: #000000;  
+  letter-spacing: 0; 
+  margin: 100;
+}
+
+.parserFile{
+  margin-top: 16px;
+  font-weight: 700;
+  color: rgba(0,0,0,0.55);
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.parserError{
+  margin-top: 10px;
+  font-weight: 900;
+  color: #b91c1c;
+}
+
+.parserActions{
+  margin-top: 22px;
+  display: flex;
+  gap: 12px;
+}
+
+.primaryBtn{
+  padding: 12px 18px;
+  border-radius: 999px;
+  border: none;
+  background: #1f6d8a;
+  color: white;
+  font-weight: 900;
+  cursor: pointer;
+}
+.primaryBtn:disabled{ opacity: 0.6; cursor: not-allowed; }
+
+.secondaryBtn{
+  padding: 12px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,0.14);
+  background: rgba(255,255,255,0.75);
+  color: rgba(0,0,0,0.75);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.parserDrop{
+  width: min(380px, 36vw);
+  height: 260px;
+  background: rgba(190,190,190,0.55);
+  border: 2px dotted rgba(0,0,0,0.55);
+  border-radius: 8px;
+  position: relative;  
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+.parserDrop.dragOver{
+  background: rgba(31,109,138,0.12);
+  border-color: rgba(31,109,138,0.9);
+}
+
+.parserDropPill{
+  position: absolute;
+  bottom: 12px;        /* distance from bottom */
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #2f95b5;
+  font-weight: 800;
+  font-size: 11px;
+  border: 1px solid rgba(0,0,0,0.35);
+}
+
+.hiddenInput{ display: none; }
+
+/* Responsive: stack on small screens */
+@media (max-width: 900px){
+  .parserInner{ grid-template-columns: 1fr; }
+  .parserDrop{ width: min(520px, 90vw); }
+}

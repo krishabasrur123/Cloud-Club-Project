@@ -1,0 +1,96 @@
+.calWrap{
+    width: min(1100px, 94vw);
+    margin: 80px auto 40px;
+    position: relative;
+    z-index: 3;
+  }
+  
+  .weekGrid{
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    border: 1px solid rgba(0,0,0,0.35);
+    box-shadow: 0 14px 35px rgba(0,0,0,0.18);
+    background: rgba(201,241,255,0.70);
+  }
+  
+  .dayCol{
+    min-height: 540px;
+    border-right: 1px solid rgba(0,0,0,0.25);
+    display: flex;
+    flex-direction: column;
+  }
+  .dayCol:last-child{ border-right: none; }
+  
+  .dayHead{
+    background: rgba(255,255,255,0.55);
+    border-bottom: 1px solid rgba(0,0,0,0.25);
+    padding: 10px;
+    display: grid;
+    gap: 2px;
+    text-align: center;
+  }
+  
+  .dayName{
+    font-size: 12px;
+    font-weight: 900;
+    color: rgba(0,0,0,0.70);
+  }
+  .dayDate{
+    font-size: 22px;
+    font-weight: 900;
+    color: rgba(0,0,0,0.70);
+  }
+  
+  .dayBody{
+    flex: 1;
+    padding: 10px 8px;
+    display: grid;
+    gap: 10px;
+    align-content: start;
+  }
+  
+  .ev{
+    border-radius: 10px;
+    padding: 10px;
+    border: 1px solid rgba(0,0,0,0.15);
+    font-weight: 800;
+    font-size: 10px;
+  }
+  
+  .evTitle{
+    font-weight: 900;
+    margin-bottom: 6px;
+    font-size: 11px;
+  }
+  
+  .evMeta{
+    color: rgba(0,0,0,0.65);
+    margin-bottom: 3px;
+  }
+  
+  .evMove select{
+    margin-top: 8px;
+    width: 100%;
+    padding: 6px 8px;
+    border-radius: 10px;
+    border: 1px solid rgba(0,0,0,0.14);
+    background: rgba(255,255,255,0.75);
+    font-weight: 900;
+    font-size: 10px;
+  }
+  
+  .ev.pink{ background: rgba(255,210,220,0.70); }
+  .ev.yellow{ background: rgba(255,245,190,0.75); }
+  .ev.purple{ background: rgba(228,210,255,0.70); }
+  .ev.green{ background: rgba(205,255,205,0.70); }
+  
+  @media (max-width: 1050px){
+    .weekGrid{
+      grid-template-columns: 1fr;
+    }
+    .dayCol{
+      min-height: unset;
+      border-right: none;
+      border-bottom: 1px solid rgba(0,0,0,0.25);
+    }
+  }
