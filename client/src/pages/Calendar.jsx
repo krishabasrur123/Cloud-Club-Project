@@ -12,9 +12,9 @@ import lightbulb from "../assets/light.png";
 import clock from "../assets/clock.png";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const HOUR_HEIGHT = 56;
+const HOUR_HEIGHT = 42;
 const MINUTES_STEP = 30;
-const DAY_HEADER_H = 54;
+const DAY_HEADER_H = 48;
 const MIN_DURATION = 30;
 
 const PRIORITY_COLOR = {
