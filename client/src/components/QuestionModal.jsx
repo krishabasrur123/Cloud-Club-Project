@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import "./questionModal.css";
+import "./modal.css";
+
 
 export default function QuestionModal({
   open,

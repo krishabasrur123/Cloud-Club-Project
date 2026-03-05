@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import TaskModal from "../components/TaskModal";
+
 import "./auth.css";
 import "./dashboard.css";
 
@@ -47,23 +49,32 @@ const MOCK_TASKS = [
     due: "12/13/26",
     status: "done",
     progress: 1.0,
-    priorityScore: 0.40,
+    priorityScore: 0.4,
     difficulty: 1,
   },
 ];
 
 function sortTasks(tasks, mode) {
   const copy = [...tasks];
-  if (mode === "priority") return copy.sort((a, b) => (b.priorityScore ?? 0) - (a.priorityScore ?? 0));
-  if (mode === "due") return copy.sort((a, b) => String(a.due).localeCompare(String(b.due)));
-  if (mode === "difficulty") return copy.sort((a, b) => (b.difficulty ?? 0) - (a.difficulty ?? 0));
+  if (mode === "priority")
+    return copy.sort((a, b) => (b.priorityScore ?? 0) - (a.priorityScore ?? 0));
+  if (mode === "due")
+    return copy.sort((a, b) => String(a.due).localeCompare(String(b.due)));
+  if (mode === "difficulty")
+    return copy.sort((a, b) => (b.difficulty ?? 0) - (a.difficulty ?? 0));
   return copy;
 }
 
 export default function Dashboard() {
   const navigate = useNavigate();
+
+  // ✅ modal state
+  const [taskModalOpen, setTaskModalOpen] = useState(false);
+
+  // ✅ tasks state
   const [tasks, setTasks] = useState(MOCK_TASKS);
 
+  // ✅ sort state
   const [sortTodo, setSortTodo] = useState("priority");
   const [sortProg, setSortProg] = useState("due");
   const [sortDone, setSortDone] = useState("difficulty");
@@ -85,12 +96,44 @@ export default function Dashboard() {
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)));
   }
 
+  function handleCreateTask(payload) {
+    // payload from TaskModal:
+    // { title, course?, dueDate?, priority, notes? }
+
+    const priorityScoreMap = { low: 0.35, medium: 0.65, high: 0.9 };
+
+    const newTask = {
+      id: crypto.randomUUID(),
+      title: payload.title,
+      desc: payload.notes || payload.course || "",
+      due: payload.dueDate ? new Date(payload.dueDate).toLocaleDateString() : "",
+      status: "todo",
+      progress: 0,
+      priorityScore: priorityScoreMap[payload.priority] ?? 0.6,
+      difficulty: 3,
+    };
+
+    setTasks((prev) => [newTask, ...prev]);
+    setTaskModalOpen(false);
+  }
+
   return (
     <div className="authPage">
       <div className="topNav topNavFull">
-        <button className="pill" onClick={() => navigate("/parser")}>input content</button>
-        <button className="pill active" onClick={() => navigate("/dashboard")}>dashboard</button>
-        <button className="pill" onClick={() => navigate("/calendar")}>Calendar</button>
+        <button className="pill" onClick={() => navigate("/parser")}>
+          Parser
+        </button>
+        <button className="pill active" onClick={() => navigate("/dashboard")}>
+          Dashboard
+        </button>
+        <button className="pill" onClick={() => navigate("/calendar")}>
+          Calendar
+        </button>
+
+        {/* ✅ open modal */}
+        <button className="pill" onClick={() => setTaskModalOpen(true)}>
+          + Add Task
+        </button>
       </div>
 
       <img className="bgIcon bgClipboard" src={clipboard} alt="" />
@@ -103,7 +146,7 @@ export default function Dashboard() {
           title="Tasks"
           sortLabel="Sort By: Scored Priority"
           sortValue={sortTodo}
-          onSort={(v) => setSortTodo(v)}
+          onSort={setSortTodo}
           theme="tasks"
           items={todo}
           onMove={moveTask}
@@ -112,7 +155,7 @@ export default function Dashboard() {
           title="In Progress"
           sortLabel="Sort By: Date Due"
           sortValue={sortProg}
-          onSort={(v) => setSortProg(v)}
+          onSort={setSortProg}
           theme="progress"
           items={inprog}
           onMove={moveTask}
@@ -121,12 +164,18 @@ export default function Dashboard() {
           title="Done"
           sortLabel="Sort By: Difficulty"
           sortValue={sortDone}
-          onSort={(v) => setSortDone(v)}
+          onSort={setSortDone}
           theme="done"
           items={done}
           onMove={moveTask}
         />
       </div>
+
+      <TaskModal
+        open={taskModalOpen}
+        onClose={() => setTaskModalOpen(false)}
+        onCreate={handleCreateTask}
+      />
     </div>
   );
 }
@@ -141,7 +190,11 @@ function Column({ title, sortLabel, sortValue, onSort, theme, items, onMove }) {
 
         <div className="sortRow">
           <div className="sortChip">{sortLabel}</div>
-          <select className="sortSelect" value={sortValue} onChange={(e) => onSort(e.target.value)}>
+          <select
+            className="sortSelect"
+            value={sortValue}
+            onChange={(e) => onSort(e.target.value)}
+          >
             <option value="priority">Priority</option>
             <option value="due">Due date</option>
             <option value="difficulty">Difficulty</option>
@@ -170,7 +223,10 @@ function TaskCard({ task, onMove }) {
         <div className="progressLabel">PROGRESS</div>
         <div className="dots">
           {Array.from({ length: 10 }).map((_, i) => (
-            <span key={i} className={`dot ${i < Math.round(pct / 10) ? "on" : ""}`} />
+            <span
+              key={i}
+              className={`dot ${i < Math.round(pct / 10) ? "on" : ""}`}
+            />
           ))}
         </div>
         <div className="pct">{pct}%</div>
@@ -178,11 +234,16 @@ function TaskCard({ task, onMove }) {
 
       <div className="cardMeta">Hard Date: {task.due}</div>
 
-      {/* quick move buttons (later replace with drag/drop) */}
       <div className="moveRow">
-        <button className="miniBtn" onClick={() => onMove(task.id, "todo")}>Tasks</button>
-        <button className="miniBtn" onClick={() => onMove(task.id, "inprogress")}>In Progress</button>
-        <button className="miniBtn" onClick={() => onMove(task.id, "done")}>Done</button>
+        <button className="miniBtn" onClick={() => onMove(task.id, "todo")}>
+          Tasks
+        </button>
+        <button className="miniBtn" onClick={() => onMove(task.id, "inprogress")}>
+          In Progress
+        </button>
+        <button className="miniBtn" onClick={() => onMove(task.id, "done")}>
+          Done
+        </button>
       </div>
     </div>
   );
