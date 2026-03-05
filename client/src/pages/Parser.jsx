@@ -1,7 +1,6 @@
 // client/src/pages/Parser.jsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import QuestionModal from "../components/QuestionModal";
 
 import "./auth.css";
 import "./parser.css";
@@ -74,7 +73,12 @@ const MOCK_QUESTIONS = [
 let DATES =[];
 let EXTARCTED_CONTENT=[];
 
+
+
 export default function Parser() {
+
+  const [qIndex, setQIndex] = useState(0);
+  const [answers, setAnswers] = useState({});
   const navigate = useNavigate();
 
   const [questionOpen, setQuestionOpen] = useState(false);
@@ -146,6 +150,7 @@ ${section.Summary}
 console.log(text);
 
 
+
     const questionsRes = await fetch("http://127.0.0.1:5001/api/extractQuestions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -169,8 +174,7 @@ console.log(text);
 
     setQIndex(0);
     setAnswers({});
-    setQOpen(true);
-
+setQuestionOpen(true);
 
    
       if (!rawText.trim() && !file) {
@@ -307,14 +311,30 @@ console.log(text);
         </div>
       </div>
 
-      <QuestionModal
-        open={questionOpen}
-        onClose={() => setQuestionOpen(false)}
-        onSubmit={(payload) => {
-          console.log("QuestionModal submit:", payload);
-          setQuestionOpen(false);
-        }}
-      />
+    <QuestionModal
+  open={questionOpen}
+  title={MOCK_QUESTIONS[qIndex]?.title}
+  question={MOCK_QUESTIONS[qIndex]?.prompt}
+  options={MOCK_QUESTIONS[qIndex]?.options || []}
+  onClose={() => setQuestionOpen(false)}
+ onSubmit={(selected) => {
+  const currentQ = MOCK_QUESTIONS[qIndex];
+
+  setAnswers((prev) => ({
+    ...prev,
+    [qIndex]: selected,
+  }));
+
+  const next = qIndex + 1;
+
+  if (next < MOCK_QUESTIONS.length) {
+    setQIndex(next);
+  } else {
+    setQuestionOpen(false);
+  }
+}}
+/>
+      
     </div>
   );
 }
