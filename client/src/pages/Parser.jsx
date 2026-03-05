@@ -1,6 +1,7 @@
 // client/src/pages/Parser.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import QuestionModal from "../components/QuestionModal";
 
 import "./auth.css";
 import "./parser.css";
@@ -10,82 +11,23 @@ import pencil from "../assets/pencil.png";
 import lightbulb from "../assets/light.png";
 import clock from "../assets/clock.png";
 
-import QuestionModal from "../components/QuestionModal.jsx";
-
-
-import pdfToText from 'react-pdftotext';
-
-
-
-// Usage
-
-// Parser.jsx
-
-
-const MAX_MB = 20;
-const ACCEPT_EXT = ["pdf", "pptx", "txt"];
-
-function getExt(file) {
-  let name = "";
-  if (typeof file === "string") {
-    name = file;
-  } else if (file?.name) {
-    name = file.name;
-  } else if (file?.originalname) {
-    name = file.originalname;
-  }
-  if (!name) return "";
-  const parts = name.split(".");
-  return parts.length > 1 ? parts.pop().toLowerCase() : "";
+function isPdf(file) {
+  if (!file) return false;
+  return file.type === "application/pdf" || file.name?.toLowerCase().endsWith(".pdf");
 }
-
-export async function loadFileContent(file) {
-  const ext = getExt(file);
-  let docs = "";
-
-  if (ext === "pdf") {
-    try {
-      docs = await pdfToText(file);   // <-- return the extracted text
-    } catch (err) {
-      console.error("Failed to extract text from pdf", err);
-    }
-  }
-
-  console.log(docs);
-  return docs;  // <-- must return a string
-}
-
-
-
-const MOCK_QUESTIONS = [
-  {
-    title: "Question 1:",
-    prompt: "How confident are you with matrix multiplication?",
-    options: ["No exposure", "Basic familiarity", "Working knowledge", "Proficient", "Advanced"],
-  },
-  {
-    title: "Question 2:",
-    prompt: "How confident are you with eigenvalues/eigenvectors?",
-    options: ["No exposure", "Basic familiarity", "Working knowledge", "Proficient", "Advanced"],
-  },
-];
-
-let DATES =[];
-let EXTARCTED_CONTENT=[];
-
-
 
 export default function Parser() {
-
-  const [qIndex, setQIndex] = useState(0);
-  const [answers, setAnswers] = useState({});
   const navigate = useNavigate();
-
-  const [questionOpen, setQuestionOpen] = useState(false);
+  const fileInputRef = useRef(null);
 
   const [file, setFile] = useState(null);
-  const [rawText, setRawText] = useState("");
-  const [parsed, setParsed] = useState([]); // [{title, due, course, priority, notes}]
+  const [dragOver, setDragOver] = useState(false);
+
+  // Question modal state
+  const [questionOpen, setQuestionOpen] = useState(false);
+  const [profile, setProfile] = useState(null);
+
+  // UI state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -94,13 +36,51 @@ export default function Parser() {
     if (!token) navigate("/auth");
   }, [navigate]);
 
-  async function handleParse() {
+  function validateAndSetFile(f) {
+    if (!f) return;
+    if (!isPdf(f)) {
+      setError("Only PDF files are supported.");
+      setFile(null);
+      return;
+    }
     setError("");
-    setLoading(true);
+    setFile(f);
+  }
 
+  function onBrowseClick() {
+    setError("");
+    fileInputRef.current?.click();
+  }
+
+  async function onContinue() {
+    setError("");
+
+    if (!file) {
+      setError("Please upload a PDF to continue.");
+      return;
+    }
+    if (!isPdf(file)) {
+      setError("Only PDF files are supported.");
+      setFile(null);
+      return;
+    }
+
+    setLoading(true);
     try {
-      // ✅ later: call backend upload, wait for AI parse, then open questions
-      // For now, simulate “AI read complete”
+      /**
+       * For now: just store file info + profile so UI flow works.
+       * Next: we will call the HuggingFace backend endpoint and store extracted JSON.
+       */
+      localStorage.setItem(
+        "parser_upload_meta",
+        JSON.stringify({
+          filename: file.name,
+          size: file.size,
+          type: file.type,
+          profile: profile || null,
+          uploadedAt: new Date().toISOString(),
+        })
+      );
 
        let fileContent = "";
 
@@ -207,144 +187,126 @@ setQuestionOpen(true);
 
       setParsed(items);
     } catch (e) {
-      setError(e.message || "Failed to parse.");
+      setError(e?.message || "Something went wrong.");
     } finally {
       setLoading(false);
     }
   }
 
-  function addParsedToDashboardTasks() {
-    const existing = JSON.parse(localStorage.getItem("draft_tasks") || "[]");
-    localStorage.setItem("draft_tasks", JSON.stringify([...parsed, ...existing]));
-    navigate("/dashboard");
-  }
-
   return (
     <div className="authPage">
+      {/* top nav */}
       <div className="topNav topNavFull">
         <button className="pill active" onClick={() => navigate("/parser")}>
-          Parser
+          input content
         </button>
         <button className="pill" onClick={() => navigate("/dashboard")}>
-          Dashboard
+          dashboard
         </button>
         <button className="pill" onClick={() => navigate("/calendar")}>
           Calendar
         </button>
 
         <button className="pill" onClick={() => setQuestionOpen(true)}>
-          + Add Task
+          + Add Question
         </button>
       </div>
 
+      {/* background icons */}
       <img className="bgIcon bgClipboard" src={clipboard} alt="" />
       <img className="bgIcon bgPencil" src={pencil} alt="" />
       <img className="bgIcon bgLight" src={lightbulb} alt="" />
       <img className="bgIcon bgClock" src={clock} alt="" />
 
-      <div className="parserWrap">
-        <div className="parserCard">
-          <div className="parserTitle">Input content</div>
-          <div className="parserSub">
-            Paste deadlines / assignments or upload a file. We’ll convert it into structured tasks.
-          </div>
+      {/* main step card */}
+      <div className="parserShell">
+        <div className="parserStepCard">
+          {/* left side */}
+          <div className="stepLeft">
+            <div className="stepLabel">Step 1</div>
 
-          <div className="parserRow">
-            <label className="parserLabel">Upload (optional)</label>
-            <input
-              className="parserFile"
-              type="file"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-            />
-          </div>
-
-          <div className="parserRow">
-            <label className="parserLabel">Paste text</label>
-            <textarea
-              className="parserTextarea"
-              value={rawText}
-              onChange={(e) => setRawText(e.target.value)}
-              placeholder={`Example:\nEcon problem set due Thursday 10:50pm\nStats HW due Tuesday 2pm\nRead Chapter 5 by Friday`}
-              rows={8}
-            />
-          </div>
-
-          {error && <div className="parserError">{error}</div>}
-
-          <div className="parserActions">
-            <button className="parserBtn" onClick={handleParse} disabled={loading}>
-              {loading ? "Parsing..." : "Parse"}
-            </button>
-            <button
-              className="parserBtn ghost"
-              onClick={() => {
-                setFile(null);
-                setRawText("");
-                setParsed([]);
-                setError("");
-              }}
-              disabled={loading}
-            >
-              Clear
-            </button>
-          </div>
-        </div>
-
-        <div className="parserCard">
-          <div className="parserTitle">Parsed tasks</div>
-          <div className="parserSub">Review and send them to your dashboard.</div>
-
-          {parsed.length === 0 ? (
-            <div className="parserEmpty">Nothing parsed yet.</div>
-          ) : (
-            <>
-              <div className="parsedList">
-                {parsed.map((p) => (
-                  <div key={p.id} className="parsedItem">
-                    <div className="parsedMain">
-                      <div className="parsedName">{p.title}</div>
-                      <div className="parsedMeta">
-                        {p.priority ? `Priority: ${p.priority}` : ""}{" "}
-                        {p.due ? `• Due: ${p.due}` : ""}{" "}
-                        {p.course ? `• ${p.course}` : ""}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <button className="parserBtn full" onClick={addParsedToDashboardTasks}>
-                Add to Dashboard
+            <div className="stepButtons">
+              <button className="stepBtn primary" onClick={onContinue} disabled={loading}>
+                {loading ? "Loading..." : "Continue"}
               </button>
-            </>
-          )}
+
+              <button className="stepBtn" onClick={onBrowseClick} disabled={loading}>
+                Browse
+              </button>
+            </div>
+
+            {file && (
+              <div className="filePill" title={file.name}>
+                {file.name}
+              </div>
+            )}
+
+            {profile && (
+              <div className="filePill" title="Saved questions">
+                ✅ questions saved
+              </div>
+            )}
+
+            {error && <div className="parserError">{error}</div>}
+          </div>
+
+          {/* drop zone */}
+          <div
+            className={`dropZone ${dragOver ? "dragOver" : ""}`}
+            onDragEnter={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setDragOver(true);
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setDragOver(true);
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setDragOver(false);
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setDragOver(false);
+              const f = e.dataTransfer.files?.[0];
+              validateAndSetFile(f);
+            }}
+            onClick={onBrowseClick}
+            role="button"
+            tabIndex={0}
+          >
+            <div className="dropText">{file ? "PDF selected" : "drop file (pdf)"}</div>
+            <div className="dropSub">{file ? "Click to replace" : "or click to browse"}</div>
+          </div>
+
+          {/* hidden input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/pdf"
+            style={{ display: "none" }}
+            onChange={(e) => {
+              const f = e.target.files?.[0] || null;
+              validateAndSetFile(f);
+              e.target.value = "";
+            }}
+          />
         </div>
       </div>
 
-    <QuestionModal
-  open={questionOpen}
-  title={MOCK_QUESTIONS[qIndex]?.title}
-  question={MOCK_QUESTIONS[qIndex]?.prompt}
-  options={MOCK_QUESTIONS[qIndex]?.options || []}
-  onClose={() => setQuestionOpen(false)}
- onSubmit={(selected) => {
-  const currentQ = MOCK_QUESTIONS[qIndex];
-
-  setAnswers((prev) => ({
-    ...prev,
-    [qIndex]: selected,
-  }));
-
-  const next = qIndex + 1;
-
-  if (next < MOCK_QUESTIONS.length) {
-    setQIndex(next);
-  } else {
-    setQuestionOpen(false);
-  }
-}}
-/>
-      
+      {/* modal */}
+      <QuestionModal
+        open={questionOpen}
+        onClose={() => setQuestionOpen(false)}
+        onSubmit={(payload) => {
+          setProfile(payload);
+          setQuestionOpen(false);
+        }}
+      />
     </div>
   );
 }
