@@ -102,7 +102,17 @@ export default function Parser() {
       // ✅ later: call backend upload, wait for AI parse, then open questions
       // For now, simulate “AI read complete”
 
-         const fileContent = await loadFileContent(file);
+       let fileContent = "";
+
+if (rawText && rawText.trim()) {
+  // ✅ Use pasted text if available
+  fileContent = rawText.trim();
+} else if (file) {
+  // ✅ Otherwise extract from uploaded file
+  fileContent = await loadFileContent(file);
+} else {
+  throw new Error("Add text or upload a file first.");
+}
 
          const deadlinesRes = await fetch("http://127.0.0.1:5001/api/extractDeadlines", {
   method: "POST",
