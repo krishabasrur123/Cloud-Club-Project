@@ -103,9 +103,6 @@ export default function Parser() {
     setLoading(true);
 
     try {
-      // ✅ later: call backend upload, wait for AI parse, then open questions
-      // For now, simulate “AI read complete”
-
          const fileContent = await loadFileContent(file);
 
          const deadlinesRes = await fetch("http://127.0.0.1:5001/api/extractDeadlines", {
@@ -223,10 +220,6 @@ setQuestions(formattedQuestions);
         </button>
         <button className="pill" onClick={() => navigate("/calendar")}>
           Calendar
-        </button>
-
-        <button className="pill" onClick={() => setQuestionOpen(true)}>
-          + Add Task
         </button>
       </div>
 

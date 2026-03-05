@@ -1,119 +1,196 @@
 /* client/src/pages/parser.css */
 
-.parserShell {
-  display: flex;
-  justify-content: center;
-  padding: 90px 20px 60px;
-}
-
-.parserStepCard {
-  width: min(980px, 95vw);
-  min-height: 320px;
-  background: rgba(165, 231, 255, 0.55);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 14px;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.08);
+/* layout that centers the two cards like the screenshot */
+.parserWrap{
+  width: min(1120px, 92vw);
+  margin: 105px auto 70px;
   display: grid;
-  grid-template-columns: 1fr 1.2fr;
-  gap: 24px;
-  padding: 40px 44px;
-  backdrop-filter: blur(6px);
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  align-items: start;
 }
 
-.stepLeft {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 14px;
+/* each card becomes the rounded “blue panel” style */
+.parserCard{
+  background: rgba(201, 241, 255, 0.80);
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 22px;
+  box-shadow: 0 22px 55px rgba(0,0,0,0.18);
+  padding: 42px 44px;
+  position: relative;
+  overflow: hidden;
 }
 
-.stepLabel {
-  font-size: 14px;
-  color: rgba(31, 42, 55, 0.7);
+/* soft inner sheen */
+.parserCard::before{
+  content:"";
+  position:absolute;
+  inset: 14px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.16);
+  pointer-events: none;
+}
+
+.parserTitle{
+  position: relative;
+  z-index: 1;
+  font-size: 18px;
+  font-weight: 800;
+  color: rgba(31,42,55,0.78);
   margin-bottom: 6px;
 }
 
-.stepButtons {
+.parserSub{
+  position: relative;
+  z-index: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(31,42,55,0.62);
+  line-height: 1.35;
+  margin-bottom: 18px;
+}
+
+.parserRow{
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.parserLabel{
+  font-size: 13px;
+  font-weight: 800;
+  color: rgba(31,42,55,0.72);
+}
+
+.parserFile{
+  width: 100%;
+  font-size: 13px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: rgba(255,255,255,0.80);
+}
+
+.parserTextarea{
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: rgba(255,255,255,0.75);
+  padding: 12px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(31,42,55,0.75);
+  outline: none;
+  resize: vertical;
+  min-height: 160px;
+}
+
+.parserTextarea:focus,
+.parserFile:focus{
+  border-color: rgba(45, 125, 160, 0.55);
+  box-shadow: 0 0 0 4px rgba(45,125,160,0.12);
+}
+
+/* buttons */
+.parserActions{
+  position: relative;
+  z-index: 1;
   display: flex;
   gap: 12px;
-  align-items: center;
+  margin-top: 18px;
 }
 
-.stepBtn {
-  padding: 10px 16px;
+.parserBtn{
+  padding: 10px 18px;
   border-radius: 999px;
-  border: 1px solid rgba(0, 0, 0, 0.10);
-  background: rgba(255, 255, 255, 0.85);
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.stepBtn.primary {
-  background: rgba(45, 125, 160, 0.75);
+  border: 1px solid rgba(0,0,0,0.10);
+  background: rgba(45, 125, 160, 0.78);
   color: white;
-  border-color: rgba(45, 125, 160, 0.75);
-}
-
-.stepBtn:hover {
-  transform: translateY(-1px);
-}
-
-.filePill {
-  width: fit-content;
-  max-width: 320px;
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  color: rgba(31, 42, 55, 0.85);
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dropZone {
-  background: rgba(180, 190, 195, 0.55);
-  border: 2px dashed rgba(0, 0, 0, 0.25);
-  border-radius: 10px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
+  font-weight: 800;
   cursor: pointer;
-  user-select: none;
-  min-height: 200px;
+  transition: transform 0.12s ease, box-shadow 0.15s ease;
+  box-shadow: 0 10px 22px rgba(0,0,0,0.10);
 }
 
-.dropZone.dragOver {
-  border-color: rgba(45, 125, 160, 0.9);
-  background: rgba(180, 235, 255, 0.55);
+.parserBtn:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(0,0,0,0.14);
 }
 
-.dropText {
+.parserBtn:disabled{
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.parserBtn.ghost{
+  background: rgba(255,255,255,0.75);
+  color: rgba(31,42,55,0.75);
+}
+
+.parserBtn.full{
+  width: 100%;
+  margin-top: 14px;
+}
+
+/* parsed list */
+.parserEmpty{
+  position: relative;
+  z-index: 1;
   font-weight: 700;
-  color: rgba(31, 42, 55, 0.75);
+  color: rgba(31,42,55,0.55);
+  margin-top: 14px;
 }
 
-.dropSub {
-  margin-top: 6px;
+.parsedList{
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.parsedItem{
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,0.10);
+  background: rgba(255,255,255,0.70);
+  padding: 12px 14px;
+}
+
+.parsedName{
+  font-weight: 900;
+  color: rgba(31,42,55,0.80);
+  margin-bottom: 4px;
+}
+
+.parsedMeta{
   font-size: 13px;
-  color: rgba(31, 42, 55, 0.6);
+  font-weight: 700;
+  color: rgba(31,42,55,0.60);
 }
 
-.parserError {
-  margin-top: 4px;
+/* error */
+.parserError{
+  position: relative;
+  z-index: 1;
+  margin-top: 10px;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: 12px;
   background: rgba(239, 68, 68, 0.12);
   color: #b91c1c;
-  font-weight: 700;
+  font-weight: 800;
   width: fit-content;
 }
 
-/* Responsive */
-@media (max-width: 860px) {
-  .parserStepCard {
+/* responsive: stack cards */
+@media (max-width: 900px){
+  .parserWrap{
     grid-template-columns: 1fr;
+    margin-top: 95px;
+  }
+  .parserCard{
+    padding: 34px 26px;
   }
 }

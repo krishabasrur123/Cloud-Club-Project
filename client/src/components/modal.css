@@ -8,7 +8,7 @@
   }
   
   .modalCard {
-    width: min(520px, 92vw);
+    width: min(620px, 92vw);
     background: #fff;
     border-radius: 18px;
     padding: 16px;
@@ -49,4 +49,41 @@
     padding: 10px 12px;
     border-radius: 12px;
     font-size: 13px;
+  }
+  .progressRow{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-top: 4px;
+    margin-bottom: 10px;
+  }
+  
+  .progressDots{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .dot{
+    width: 11px;
+    height: 11px;
+    border-radius: 999px;
+    background: rgba(0,0,0,0.14);
+  }
+  
+  .dot.filled{
+    background: rgba(45,125,160,0.85);
+  }
+  
+  .progressPct{
+    font-weight: 800;
+    color: rgba(0,0,0,0.55);
+    min-width: 44px;
+    text-align: right;
+  }
+  
+  .progressRange{
+    width: 90%;
+    margin: 0 0 6px;
   }

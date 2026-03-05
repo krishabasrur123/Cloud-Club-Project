@@ -7,6 +7,10 @@ export default function TaskModal({ open, onClose, onCreate }) {
   const [dueDate, setDueDate] = useState("");
   const [priority, setPriority] = useState("medium");
   const [notes, setNotes] = useState("");
+
+  //  NEW: progress (0–100)
+  const [progress, setProgress] = useState(0);
+
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
@@ -17,6 +21,7 @@ export default function TaskModal({ open, onClose, onCreate }) {
     setDueDate("");
     setPriority("medium");
     setNotes("");
+    setProgress(0);          // reset
     setErr("");
     setLoading(false);
   }, [open]);
@@ -34,12 +39,17 @@ export default function TaskModal({ open, onClose, onCreate }) {
         dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
         priority,
         notes: notes || undefined,
+        progress, // include
       });
+      // you can optionally close after create:
+      // onClose();
     } catch (e2) {
       setErr(e2.message || "Failed");
       setLoading(false);
     }
   }
+
+  const progressLabel = `${progress}%`;
 
   return (
     <div className="modalOverlay" onMouseDown={onClose}>
@@ -69,6 +79,29 @@ export default function TaskModal({ open, onClose, onCreate }) {
             <option value="medium">medium</option>
             <option value="high">high</option>
           </select>
+
+          {/* NEW: Progress question + dot bar */}
+          <label>Progress</label>
+          <div className="progressRow">
+            <div className="progressDots" aria-label={`Progress ${progressLabel}`}>
+              {Array.from({ length: 10 }).map((_, i) => {
+                const filled = progress >= (i + 1) * 10;
+                return <span key={i} className={`dot ${filled ? "filled" : ""}`} />;
+              })}
+            </div>
+
+            <div className="progressPct">{progressLabel}</div>
+          </div>
+
+          <input
+            className="progressRange"
+            type="range"
+            min="0"
+            max="100"
+            step="10"
+            value={progress}
+            onChange={(e) => setProgress(Number(e.target.value))}
+          />
 
           <label>Notes (optional)</label>
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
