@@ -10,15 +10,51 @@ import clock from "../assets/clock.png";
 
 import QuestionModal from "../components/QuestionModal.jsx";
 
+
+import pdfToText from 'react-pdftotext'
+
+
+
+// Usage
+
+// Parser.jsx
+
+
 const MAX_MB = 20;
 const ACCEPT_EXT = ["pdf", "pptx", "txt"];
 
-function getExt(name = "") {
+function getExt(file) {
+  let name = "";
+  if (typeof file === "string") {
+    name = file;
+  } else if (file?.name) {
+    name = file.name;
+  } else if (file?.originalname) {
+    name = file.originalname;
+  }
+  if (!name) return "";
   const parts = name.split(".");
   return parts.length > 1 ? parts.pop().toLowerCase() : "";
 }
 
-// ✅ mocked AI question set (replace with backend response later)
+export async function loadFileContent(file) {
+  const ext = getExt(file);
+  let docs = "";
+
+  if (ext === "pdf") {
+    try {
+      docs = await pdfToText(file);   // <-- return the extracted text
+    } catch (err) {
+      console.error("Failed to extract text from pdf", err);
+    }
+  }
+
+  console.log(docs);
+  return docs;  // <-- must return a string
+}
+
+
+
 const MOCK_QUESTIONS = [
   {
     title: "Question 1:",
@@ -31,6 +67,9 @@ const MOCK_QUESTIONS = [
     options: ["No exposure", "Basic familiarity", "Working knowledge", "Proficient", "Advanced"],
   },
 ];
+
+let DATES =[];
+let EXTARCTED_CONTENT=[];
 
 export default function Parser() {
   const navigate = useNavigate();
@@ -85,11 +124,82 @@ export default function Parser() {
     try {
       // ✅ later: call backend upload, wait for AI parse, then open questions
       // For now, simulate “AI read complete”
-      await new Promise((r) => setTimeout(r, 700));
 
-      setQIndex(0);
-      setAnswers({});
-      setQOpen(true);
+         const fileContent = await loadFileContent(file);
+
+         const deadlinesRes = await fetch("http://127.0.0.1:5001/api/extractDeadlines", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ content: fileContent }),
+});
+
+if (!deadlinesRes.ok) {
+  throw new Error("Failed to extract deadlines");
+}
+
+const deadlinesData = await deadlinesRes.json();
+
+DATES = deadlinesData; 
+console.log(deadlinesData);
+
+
+    const extractRes = await fetch("http://127.0.0.1:5001/api/extractContent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: fileContent }),
+    });
+
+    if (!extractRes.ok) throw new Error("Failed to extract content");
+const extractedData = await extractRes.json();
+
+console.log(extractedData);
+EXTARCTED_CONTENT = extractedData;
+
+const text = extractedData
+  .map(section => `
+# ${section.Header}
+
+## Questions
+${section.Questions.map(q => `- ${q}`).join("\n")}
+
+## Content
+${section.Content}
+
+## Summary
+${section.Summary}
+`)
+  .join("\n\n");
+
+console.log(text);
+
+
+    const questionsRes = await fetch("http://127.0.0.1:5001/api/extractQuestions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: text }),
+    });
+
+    if (!questionsRes.ok) throw new Error("Failed to generate questions");
+
+    const questionsData = await questionsRes.json();
+
+ const formattedQuestions = questionsData.questions.map((q, idx) => ({
+  title: `Question ${idx + 1}:`,
+  prompt: q.question,
+  options: q.options,
+  answer: q.answer,
+  type:q.type
+}));
+
+    console.log(formattedQuestions);
+    MOCK_QUESTIONS.splice(0, MOCK_QUESTIONS.length, ...formattedQuestions);
+
+    setQIndex(0);
+    setAnswers({});
+    setQOpen(true);
+
+
+   
     } catch (e) {
       setError(String(e?.message || e));
     } finally {
