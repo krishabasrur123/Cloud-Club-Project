@@ -1,18 +1,18 @@
 import { useEffect, useState } from "react";
 import "./questionModal.css";
 
-export default function QuestionModal({ open, onClose, onSubmit }) {
+export default function QuestionModal({ open, title, question, options = [], onClose, onSubmit }) {
   const [val, setVal] = useState("");
 
   useEffect(() => {
     if (open) setVal("");
-  }, [open]);
+  }, [open, title]); // reset val when modal opens or question changes
 
   if (!open) return null;
 
   function handleSubmit() {
-    // You can expand this later to multiple questions.
-    onSubmit?.({ matrix_mult_confidence: Number(val) });
+    onSubmit?.(val); // return the selected option
+    setVal(""); // reset for next question
   }
 
   return (
@@ -20,10 +20,8 @@ export default function QuestionModal({ open, onClose, onSubmit }) {
       <div className="qCard" onMouseDown={(e) => e.stopPropagation()}>
         <div className="qHeader">
           <div className="qTitleWrap">
-            <div className="qSmall">Question 1:</div>
-            <div className="qQuestion">
-              How confident are you with matrix multiplication?
-            </div>
+            <div className="qSmall">{title}</div>
+            <div className="qQuestion">{question}</div>
           </div>
 
           <button className="qClose" onClick={onClose} aria-label="Close">
@@ -32,60 +30,18 @@ export default function QuestionModal({ open, onClose, onSubmit }) {
         </div>
 
         <div className="qBody">
-          <label className="qOption">
-            <input
-              type="radio"
-              name="q1"
-              value="1"
-              checked={val === "1"}
-              onChange={(e) => setVal(e.target.value)}
-            />
-            1 - No exposure
-          </label>
-
-          <label className="qOption">
-            <input
-              type="radio"
-              name="q1"
-              value="2"
-              checked={val === "2"}
-              onChange={(e) => setVal(e.target.value)}
-            />
-            2 - Basic familiarity
-          </label>
-
-          <label className="qOption">
-            <input
-              type="radio"
-              name="q1"
-              value="3"
-              checked={val === "3"}
-              onChange={(e) => setVal(e.target.value)}
-            />
-            3 - Working knowledge
-          </label>
-
-          <label className="qOption">
-            <input
-              type="radio"
-              name="q1"
-              value="4"
-              checked={val === "4"}
-              onChange={(e) => setVal(e.target.value)}
-            />
-            4 - Proficient
-          </label>
-
-          <label className="qOption">
-            <input
-              type="radio"
-              name="q1"
-              value="5"
-              checked={val === "5"}
-              onChange={(e) => setVal(e.target.value)}
-            />
-            5 - Advanced
-          </label>
+          {options.map((opt, idx) => (
+            <label key={idx} className="qOption">
+              <input
+                type="radio"
+                name="qOption"
+                value={opt}
+                checked={val === opt}
+                onChange={(e) => setVal(e.target.value)}
+              />
+              {opt}
+            </label>
+          ))}
         </div>
 
         <div className="qFooter">

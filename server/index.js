@@ -4,7 +4,7 @@ const cors = require("cors");
 require("dotenv").config();
 console.log("ENV CHECK MONGO_URI:", process.env.MONGO_URI);
 console.log("ENV CHECK PORT:", process.env.PORT);
-
+const { jsonrepair } = require("jsonrepair");
 
 const fs = require("fs");
 const app = express();
@@ -179,8 +179,12 @@ ${content}
 
 
     let rawContent = data.choices[0].message.content;
-const jsonStart = rawContent.indexOf("["); // find start of JSON array
-if (jsonStart !== -1) rawContent = rawContent.slice(jsonStart); // remove leading text
+const match = rawContent.match(/\{[\s\S]*\}/);
+if (!match) {
+  return res.status(500).json({ error: "No JSON found", rawOutput: rawContent });
+}
+let jsonBlock = match[0];
+jsonBlock = jsonrepair(jsonBlock);
 
 
     let parsed;
@@ -200,6 +204,9 @@ if (jsonStart !== -1) rawContent = rawContent.slice(jsonStart); // remove leadin
 });
 
 // -------------------- Extract Questions Route --------------------
+
+
+
 app.post("/api/extractQuestions", async (req, res) => {
   const { content } = req.body;
 
@@ -211,22 +218,22 @@ app.post("/api/extractQuestions", async (req, res) => {
       {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${process.env.HF_TOKEN}`,
+          Authorization: `Bearer ${process.env.HF_TOKEN}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           model: "meta-llama/Meta-Llama-3-8B-Instruct",
+          response_format: {type: "json_object" },
+
           messages: [
             {
               role: "system",
               content:
-                "You are a teaching assistant AI. You create multiple-choice knowledge-check questions from course content.",
+                "You are a teaching assistant AI that creates conceptual MCQ questions."
             },
             {
               role: "user",
-              content: `
-
-Given the course content below, do these things:
+              content: `Given the course content below, do these things:
 
 1. Identify the main topics/concepts taught in this course.
 
@@ -307,30 +314,40 @@ Format:
 
 If type = "confidence", set answer to "NONE".
 
-COURSE TEXT:
-
-${content}
-`,
-            },
+COURSE CONTENT BELOW:
+\n\n${content}`
+            }
           ],
-          temperature: 0.6,
+          temperature: 0.6
         }),
       }
     );
 
     const data = await response.json();
-    if (!response.ok) return res.status(500).json(data);
 
-    const content_new = data.choices[0].message.content;
-
-    let parsed;
-    try {
-      parsed = JSON.parse(content_new);
-    } catch (e) {
-      return res.status(500).json({ error: "Model did not return valid JSON", rawOutput: content_new });
+    if (!response.ok) {
+      console.error("HF API error:", data);
+      return res.status(500).json(data);
     }
 
+    const content_new = data?.choices?.[0]?.message?.content;
+    console.log(content_new);
+
+    if (!content_new) {
+      console.error("Invalid model response:", data);
+      return res.status(500).json({ error: "Invalid model response", raw: data });
+    }
+
+    const jsonMatch = content_new.match(/\{[\s\S]*\}/);
+
+    if (!jsonMatch) {
+      return res.status(500).json({ error: "No JSON in response", rawOutput: content_new });
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]);
+
     res.json(parsed);
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Extracting Questions Failed" });
