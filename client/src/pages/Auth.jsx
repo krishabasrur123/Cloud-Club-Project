@@ -48,15 +48,6 @@ export default function Auth() {
 
   return (
     <div className="authPage">
-      <div className="topNav">
-        <button className="pill active">Login</button>
-        <button className="pill" onClick={() => navigate("/parser")}>
-          Parser
-        </button>
-        <button className="pill" onClick={() => navigate("/dashboard")}>
-          Dashboard
-        </button>
-      </div>
 
       <img className="bgIcon bgClipboard" src={clipboard} alt="" />
       <img className="bgIcon bgPencil" src={pencil} alt="" />

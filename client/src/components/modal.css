@@ -1,0 +1,52 @@
+.modalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    display: grid;
+    place-items: center;
+    z-index: 999;
+  }
+  
+  .modalCard {
+    width: min(520px, 92vw);
+    background: #fff;
+    border-radius: 18px;
+    padding: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  }
+  
+  .modalHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  
+  .modalTitle { font-size: 18px; font-weight: 700; }
+  .modalX { border: 0; background: transparent; font-size: 18px; cursor: pointer; }
+  
+  .modalForm { display: grid; gap: 10px; }
+  .modalForm label { font-size: 12px; opacity: 0.75; }
+  .modalForm input, .modalForm select, .modalForm textarea {
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(0,0,0,0.12);
+    outline: none;
+  }
+  
+  .modalBtn {
+    margin-top: 8px;
+    border: 0;
+    border-radius: 12px;
+    padding: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  
+  .modalErr {
+    background: rgba(255,0,0,0.08);
+    color: #a40000;
+    padding: 10px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+  }

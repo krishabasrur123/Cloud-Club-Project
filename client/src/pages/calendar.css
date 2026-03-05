@@ -1,96 +1,189 @@
-.calWrap{
-    width: min(1100px, 94vw);
-    margin: 80px auto 40px;
+.calShell{
+    width: min(1180px, 96vw);
+    margin: 78px auto 36px;
     position: relative;
     z-index: 3;
   }
   
-  .weekGrid{
+  .legend{
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  
+  .legendItem{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 900;
+    font-size: 12px;
+    color: rgba(0,0,0,0.70);
+    background: rgba(255,255,255,0.55);
+    border: 1px solid rgba(0,0,0,0.10);
+    border-radius: 999px;
+    padding: 7px 10px;
+  }
+  
+  .legendHint{
+    margin-left: auto;
+    font-weight: 800;
+    font-size: 12px;
+    color: rgba(0,0,0,0.55);
+  }
+  
+  .swatch{
+    width: 14px;
+    height: 14px;
+    border-radius: 6px;
+    border: 1px solid rgba(0,0,0,0.16);
+  }
+  
+  .calGridWrap{
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: 76px 1fr;
     border: 1px solid rgba(0,0,0,0.35);
     box-shadow: 0 14px 35px rgba(0,0,0,0.18);
     background: rgba(201,241,255,0.70);
   }
   
-  .dayCol{
-    min-height: 540px;
+  .timeRail{
     border-right: 1px solid rgba(0,0,0,0.25);
-    display: flex;
-    flex-direction: column;
+    background: rgba(255,255,255,0.45);
   }
-  .dayCol:last-child{ border-right: none; }
   
-  .dayHead{
+  .timeRailHeader{
+    height: 54px;
+    border-bottom: 1px solid rgba(0,0,0,0.25);
+  }
+  
+  .timeTick{
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding-right: 8px;
+    padding-top: 6px;
+  }
+  
+  .timeTick span{
+    font-size: 11px;
+    font-weight: 900;
+    color: rgba(0,0,0,0.55);
+  }
+  
+  .weekArea{
+    overflow: auto;
+  }
+  
+  .dayHeaderRow{
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
     background: rgba(255,255,255,0.55);
     border-bottom: 1px solid rgba(0,0,0,0.25);
-    padding: 10px;
-    display: grid;
-    gap: 2px;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
+  
+  .dayHeaderCell{
     text-align: center;
-  }
-  
-  .dayName{
+    font-weight: 900;
     font-size: 12px;
-    font-weight: 900;
     color: rgba(0,0,0,0.70);
-  }
-  .dayDate{
-    font-size: 22px;
-    font-weight: 900;
-    color: rgba(0,0,0,0.70);
-  }
-  
-  .dayBody{
-    flex: 1;
-    padding: 10px 8px;
     display: grid;
-    gap: 10px;
-    align-content: start;
+    place-items: center;
+    border-right: 1px solid rgba(0,0,0,0.15);
+  }
+  .dayHeaderCell:last-child{ border-right: none; }
+  
+  .gridBody{
+    position: relative;
+    width: 100%;
   }
   
-  .ev{
-    border-radius: 10px;
-    padding: 10px;
-    border: 1px solid rgba(0,0,0,0.15);
-    font-weight: 800;
-    font-size: 10px;
+  .hourLine{
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(0,0,0,0.10);
   }
+  
+  .daySep{
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: rgba(0,0,0,0.12);
+  }
+  
+  /* Events */
+  .calEvent{
+    position: absolute;
+    border-radius: 10px;
+    border: 1px solid rgba(0,0,0,0.15);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.10);
+    user-select: none;
+    margin: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  
+  /* The central move area */
+  .eventBody{
+    height: 100%;
+    padding: 10px 8px;
+    cursor: grab;
+  }
+  .eventBody:active{ cursor: grabbing; }
   
   .evTitle{
     font-weight: 900;
-    margin-bottom: 6px;
-    font-size: 11px;
+    font-size: 12px;
+    color: rgba(0,0,0,0.78);
+    margin-bottom: 4px;
   }
   
   .evMeta{
-    color: rgba(0,0,0,0.65);
-    margin-bottom: 3px;
+    font-weight: 800;
+    font-size: 11px;
+    color: rgba(0,0,0,0.60);
   }
   
-  .evMove select{
-    margin-top: 8px;
-    width: 100%;
-    padding: 6px 8px;
-    border-radius: 10px;
-    border: 1px solid rgba(0,0,0,0.14);
-    background: rgba(255,255,255,0.75);
-    font-weight: 900;
-    font-size: 10px;
+  /* Resize handles like Google Calendar */
+  .resizeHandle{
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 10px;
+    z-index: 2;
+    cursor: ns-resize;
+    background: rgba(0,0,0,0.06);
   }
   
-  .ev.pink{ background: rgba(255,210,220,0.70); }
-  .ev.yellow{ background: rgba(255,245,190,0.75); }
-  .ev.purple{ background: rgba(228,210,255,0.70); }
-  .ev.green{ background: rgba(205,255,205,0.70); }
+  .resizeHandle.top{
+    top: 0;
+  }
+  .resizeHandle.bottom{
+    bottom: 0;
+  }
   
-  @media (max-width: 1050px){
-    .weekGrid{
-      grid-template-columns: 1fr;
-    }
-    .dayCol{
-      min-height: unset;
-      border-right: none;
-      border-bottom: 1px solid rgba(0,0,0,0.25);
-    }
+  /* Color meanings */
+  .pink{ background: rgba(255,210,220,0.85); }
+  .purple{ background: rgba(228,210,255,0.85); }
+  .yellow{ background: rgba(255,245,190,0.90); }
+  .green{ background: rgba(205,255,205,0.90); }
+  
+  .calFooterHint{
+    margin-top: 10px;
+    font-size: 12px;
+    font-weight: 800;
+    color: rgba(0,0,0,0.45);
+  }
+  
+  @media (max-width: 980px){
+    .legendHint{ width: 100%; margin-left: 0; }
+    .calGridWrap{ grid-template-columns: 64px 1fr; }
   }
