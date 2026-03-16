@@ -45,17 +45,18 @@ export async function loadFileContent(file) {
 
   if (ext === "pdf") {
     try {
-      docs = await pdfToText(file);   // <-- return the extracted text
+      docs = await pdfToText(file);
     } catch (err) {
       console.error("Failed to extract text from pdf", err);
     }
+  } 
+  // ADD THIS: Handle plain text files
+  else if (ext === "txt") {
+    docs = await file.text(); 
   }
 
-  console.log(docs);
-  return docs;  // <-- must return a string
+  return docs;
 }
-
-
 
 const MOCK_QUESTIONS = [
 
@@ -98,95 +99,100 @@ export default function Parser() {
   }
 }, [questions]);
 
-  async function handleParse() {
+
+
+async function handleParse() {
     setError("");
     setLoading(true);
 
     try {
-         const fileContent = await loadFileContent(file);
-
-         const deadlinesRes = await fetch("http://127.0.0.1:5001/api/extractDeadlines", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ content: fileContent }),
-});
-
-if (!deadlinesRes.ok) {
-  throw new Error("Failed to extract deadlines");
-}
-
-const deadlinesData = await deadlinesRes.json();
-
-DATES = deadlinesData; 
-console.log(deadlinesData);
-
-
-    const extractRes = await fetch("http://127.0.0.1:5001/api/extractContent", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: fileContent }),
-    });
-
-    if (!extractRes.ok) throw new Error("Failed to extract content");
-const extractedData = await extractRes.json();
-
-console.log(extractedData);
-EXTARCTED_CONTENT = extractedData;
-
-const text = extractedData
-  .map(section => `
-# ${section.Header}
-
-## Questions
-${section.Questions.map(q => `- ${q}`).join("\n")}
-
-## Content
-${section.Content}
-
-## Summary
-${section.Summary}
-`)
-  .join("\n\n");
-
-console.log(text);
-
-
-
-    const questionsRes = await fetch("http://127.0.0.1:5001/api/extractQuestions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: text }),
-    });
-
-    if (!questionsRes.ok) throw new Error("Failed to generate questions");
-
-    const questionsData = await questionsRes.json();
-
- const formattedQuestions = questionsData.questions.map((q, idx) => ({
-  title: `Question ${idx + 1}:`,
-  prompt: q.question,
-  options: q.options,
-  answer: q.answer,
-  type:q.type
-}));
-
-    console.log(formattedQuestions);
-setQuestions(formattedQuestions);
-    console.log(questions);
-
-
-
-   
+      // 1. Check if we have any input at all
       if (!rawText.trim() && !file) {
         throw new Error("Add text or upload a file first.");
       }
 
-      const lines = rawText
+      // 2. Extract PDF text if a file exists
+      let pdfText = "";
+      if (file) {
+        pdfText = await loadFileContent(file);
+      }
+
+      // 3. Combine PDF text and TextArea text
+      // We use .filter(Boolean) to make sure we don't add extra newlines if one is empty
+      const combinedContent = [pdfText, rawText.trim()]
+        .filter(Boolean)
+        .join("\n\n---\n\n"); 
+
+      console.log("Combined Content for API:", combinedContent);
+
+      // 4. Send combinedContent to Deadlines API
+      const deadlinesRes = await fetch("http://127.0.0.1:5001/api/extractDeadlines", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: combinedContent }),
+      });
+
+      if (!deadlinesRes.ok) throw new Error("Failed to extract deadlines");
+      const deadlinesData = await deadlinesRes.json();
+      DATES = deadlinesData;
+
+      // 5. Send combinedContent to Content Extraction API
+      const extractRes = await fetch("http://127.0.0.1:5001/api/extractContent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: combinedContent }),
+      });
+
+      if (!extractRes.ok) throw new Error("Failed to extract content");
+      const extractedData = await extractRes.json();
+
+      if (!extractedData || (Array.isArray(extractedData) && extractedData.length === 0)) {
+        throw new Error("The AI couldn't find any academic content. Try adding more detail to the text box.");
+      }
+
+      const dataArray = Array.isArray(extractedData) ? extractedData : [extractedData];
+      EXTARCTED_CONTENT = dataArray;
+
+      // Format the extracted content for the Questions API
+      const formattedTextForQuestions = dataArray
+        .map(section => `
+# ${section.Header}
+## Questions
+${(section.Questions || []).map(q => `- ${q}`).join("\n")}
+## Content
+${section.Content}
+## Summary
+${section.Summary}
+`)
+        .join("\n\n");
+
+      // 6. Send formatted text to Questions API
+      const questionsRes = await fetch("http://127.0.0.1:5001/api/extractQuestions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: formattedTextForQuestions }),
+      });
+
+      if (!questionsRes.ok) throw new Error("Failed to generate questions");
+      const questionsData = await questionsRes.json();
+
+      const formattedQuestions = questionsData.questions.map((q, idx) => ({
+        title: `Question ${idx + 1}:`,
+        prompt: q.question,
+        options: q.options,
+        answer: q.answer,
+        type: q.type
+      }));
+
+      setQuestions(formattedQuestions);
+
+      // 7. Update the local "Parsed tasks" list for the UI
+      const lines = combinedContent
         .split("\n")
         .map((l) => l.trim())
         .filter(Boolean);
 
-      const items = lines.map((line, i) => ({
+      const items = lines.slice(0, 10).map((line, i) => ({
         id: `p_${i}`,
         title: line.slice(0, 60),
         course: "",
