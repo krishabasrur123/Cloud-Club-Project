@@ -521,12 +521,15 @@ Ignore administrative or logistics sections such as:
 2. For each topic or subtopic, extract or infer:
    - **Header** (required)
    - **Subheaders** (optional)
-   - **Learning questions** students should be able to answer after studying this section (required)
-   - **Detailed content / explanations** (required)
-   - **Summary of key points** (required)
+   - **Questions**: Learning questions students should be able to answer (required)
+   - **Content**: Detailed explanation or explanations (required)
+   - **Summary**: Brief summary of key points (required)
+   - **AI_estimateDifficulty**: (Integer 1-10) Rate how complex this specific topic is to master.
+   - **AI_estimateTime**: (Float/Number) Estimated hours needed to study and understand this specific section.
+
 3. Include **bullet points, examples, or detailed descriptions** if present in the text.  
 4. **Do not miss any details explicitly stated** in the professor's notes, syllabus, or PDF.  
-5. If any field is missing, **infer reasonable content** based on educational knowledge of the topic.  
+5. If any field is missing, **infer reasonable content** based on educational knowledge of the topic.    
 6. Important: Return **only JSON**, do **not** include any explanation, commentary, or text outside of the JSON. 
 The output must be directly parseable by JSON.parse().
 
@@ -536,10 +539,13 @@ The output must be directly parseable by JSON.parse().
     "Subheaders": ["Subtopic 1", "Subtopic 2"],
     "Questions": ["Question 1", "Question 2"],
     "Content": "Detailed explanation or content from the document",
-    "Summary": "Brief summary of this topic"
-  },
-  ...
+    "Summary": "Brief summary of this topic",
+    "AI_estimateDifficulty": 7,
+    "AI_estimateTime": 3.5
+  }
+  
 ]
+  ARRAY SIZE should BE CONTAINING ONLY ONE OBJECT
 
 COURSE TEXT:
 
@@ -548,7 +554,7 @@ ${content}`
         }],
         inferenceConfig: {
           maxTokens: 1000,
-          temperature: 0.3
+          temperature: 0.5
         }
       })
     });
@@ -576,6 +582,7 @@ ${content}`
     }
 
     res.json(parsed);
+    console.log(parsed);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Extracting Content Failed" });
@@ -597,158 +604,76 @@ app.post("/api/extractQuestions", async (req, res) => {
         messages: [{
           role: "user",
           content: [{
-            text:     `Given the course content below, do these things:
+            text: `
+### TASK:
+Analyze the course content and generate 10 conceptual multiple-choice academical questions + 2 Meta_Questions (MCQs).
 
-1. Identify the main topics/concepts taught in this course.
+### GUIDELINES:
+1. Identify main academic concepts and infer related subtopics.
+2. Questions must test conceptual understanding, NOT logistics (dates, grading, etc.).
+3. Generate 8 academic MCQs.
+4. APPEND exactly 2 Meta-Questions at the end:
+   - "How confident are you in your understanding of this topic?" 
+     Options: ["Very confident", "Somewhat confident", "Neutral", "Not very confident", "Unsure"]
+     Type: "confidence"
+   - "How much more time do you think you need to master this content?"
+     Options: ["I have mastered it", "Need a quick review", "Need enough time for homework", "Need significant study time"]
+     Type: "time_estimation"
 
-2. For each topic, infer related subtopics using general academic knowledge 
-   even if they are not explicitly mentioned in the text.
+### FORMATTING RULES:
+- Return ONLY valid JSON. No introductory text.
+- No trailing commas.
+- Start with { and end with }.
+- Use "type": "mcq" for academic questions and "type": "confidence" or "time_estimation" for meta-questions.
+- For meta-questions, set "answer" to "NONE".
 
-3. Generate 10 multiple-choice knowledge-check questions that test
-   conceptual understanding of these topics and related subtopics.
-
-The questions should NOT simply restate course headings.
-They should test understanding of the underlying concepts typically
-associated with the topics.
-
-Example:
-If the topic is "Machine Learning", valid question areas include:
-- supervised vs unsupervised learning
-- loss functions
-- gradient descent
-- overfitting
-- training vs inference
-
-Each question should:
-- Cover a key topic OR an inferred related concept
-- Include 3–5 options
-- Have exactly one correct answer
-- At least one question must be a confidence/knowledge-level question
-
-Guidelines for the questions:
-
-Questions should test conceptual understanding, not memorization of course logistics.
-
-Do NOT generate questions about course housekeeping and course logistics, such as:
-
-grading policies
-
-due dates
-
-attendance
-
-office hours
-
-course schedule
-
-assignment submission details
-
-instructor information
-
-Only generate questions about academic subject matter and concepts.
-
-Additional rules:
-
-Questions should NOT simply restate course headings.
-
-Prefer conceptual or applied questions.
-
-Use general knowledge of the subject area to expand topics.
-
-Important rules:
-- Avoid questions that directly copy wording from the course text
-- Prefer conceptual or applied questions
-- Use general knowledge of the subject area to generate meaningful questions
-
-Return ONLY JSON.
-The output must be directly parseable by JSON.parse().
-Gemini said
-To ensure the model consistently produces valid, parseable JSON and avoids the "trailing comma" error you just encountered, add this Important Rules section to your prompt.
-
-Important Rules for JSON Generation
-1. Strict JSON Compliance:
-
-Return only valid JSON. Do not include any introductory text (e.g., "Here is the JSON..."), markdown explanations, or closing remarks.
-
-All keys and string values must be enclosed in double quotes ("key": "value").
-
-Ensure all brackets [ ] and braces {} are properly balanced and closed.
-
-2. No Trailing Commas (CRITICAL):
-
-Do not place a comma after the last element in an array.
-
-Do not place a comma after the last property in an object.
-
-Incorrect: ["A", "B",]
-
-Correct: ["A", "B"]
-
-3. Structural Consistency:
-
-If the instruction asks for an array, start the response with [ and end with ].
-
-If the instruction asks for an object, start the response with { and end with }.
-
-Do not wrap the final output in a parent object (e.g., { "data": [...] }) unless explicitly requested.
-
-4. Content Formatting:
-
-Use \n for newlines within string values if necessary.
-
-Escape any double quotes used within the text itself using a backslash (e.g., "The professor said, \"Study hard.\"").
-
-Format:
+### JSON STRUCTURE:
 {
-  "topics": ["topic 1", "topic 2"],
+  "topics": ["Topic 1", "Topic 2"],
   "questions": [
     {
-      "question": "Question text",
-      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "question": "Example Question?",
+      "options": ["Option A", "Option B", "Option C"],
       "type": "mcq",
-      "answer": "Correct option"
-    }
+      "answer": "Option A"
+    },
+    ...
   ]
 }
 
-If type = "confidence", set answer to "NONE".
-
-COURSE CONTENT BELOW: \n\n
+COURSE CONTENT:
 ${content}`
           }]
         }],
         inferenceConfig: {
-          maxTokens: 2000,
-          temperature: 0.6
+          maxTokens: 3000, 
+          temperature: 0.1 // Keep it low for structural reliability
         }
       })
     });
 
     const result = await bedrockClient.send(command);
     const data = JSON.parse(new TextDecoder().decode(result.body));
-
     const content_new = data.output.message.content[0].text;
-    console.log(content_new);
 
-    if (!content_new) {
-      return res.status(500).json({ error: "Invalid model response", raw: data });
-    }
+    if (!content_new) throw new Error("Empty model response");
 
     const jsonMatch = content_new.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("No JSON structure found");
 
-    if (!jsonMatch) {
-      return res.status(500).json({ error: "No JSON in response", rawOutput: content_new });
-    }
+    let jsonString = jsonMatch[0];
+    
+    // Fix common trailing comma issues automatically
+    jsonString = jsonString.replace(/,\s*([\]}])/g, '$1');
 
-    const parsed = JSON.parse(jsonMatch[0]);
+    const parsed = JSON.parse(jsonString);
     res.json(parsed);
 
   } catch (err) {
-    console.error(err);
+    console.error("Questions Error:", err);
     res.status(500).json({ error: "Extracting Questions Failed" });
   }
 });
-
 // -------------------- Extract Deadlines Route --------------------
 app.post("/api/extractDeadlines", async (req, res) => {
   const { content } = req.body;
@@ -765,7 +690,12 @@ app.post("/api/extractDeadlines", async (req, res) => {
           role: "user",
           content: [{
             text: `
-Extract all academic deadlines from this syllabus.
+
+
+### INSTRUCTIONS:
+
+
+Extract all academic deadlines from this syllabus under TEXT: .
 Only include items that have an actual date or deadline.  
 - Classify each deadline as one of the following types:  
   - Midterm  
@@ -786,34 +716,56 @@ Return ONLY valid JSON in this format:
   }
 ]
 
-
-TEXT:
+TEXT: 
 ${content}`
           }]
         }],
         inferenceConfig: {
-          maxTokens: 1000,
-          temperature: 0.3
+          maxTokens: 2000, // Increased slightly to handle larger syllabi
+          temperature: 0.5 // Lowered for more consistent JSON structure
         }
       })
     });
 
     const result = await bedrockClient.send(command);
     const data = JSON.parse(new TextDecoder().decode(result.body));
-
     const raw = data.output.message.content[0].text;
 
+    console.log("=== RAW DEADLINES MODEL OUTPUT ===\n", raw, "\n==================================");
+
     let parsed;
+
     try {
-      const jsonMatch = raw.match(/\[[\s\S]*\]/);
-      parsed = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
+      // Strip markdown code fences if model wraps output
+      const stripped = raw.replace(/```(?:json)?\s*/gi, "").replace(/```/g, "").trim();
+      const jsonMatch = stripped.match(/\[[\s\S]*\]/);
+      let jsonString = jsonMatch ? jsonMatch[0] : stripped;
+      
+      // Safety: Remove trailing commas before closing brackets/braces
+      jsonString = jsonString.replace(/,\s*([\]}])/g, '$1');
+      
+      parsed = JSON.parse(jsonString);
+
     } catch (e) {
+      console.error("JSON Parse Error. Raw output:", raw);
       return res.status(500).json({ error: "Model did not return valid JSON", rawOutput: raw });
     }
+if (parsed.length === 0) {
+      parsed = [{
+        type: "General Study",
+        date: "2026-12-31",
+        time: "TBD",
+        description: "Course Mastery (Auto-generated)",
+        AI_estimateDifficulty: 5,
+        AI_estimateTime: 10.0
+      }];
+    }
+    
+
 
     res.json(parsed);
   } catch (err) {
-    console.error(err);
+    console.error("Bedrock API Error:", err);
     res.status(500).json({ error: "Extracting Deadlines Failed" });
   }
 });

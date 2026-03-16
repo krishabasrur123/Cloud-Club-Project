@@ -132,10 +132,12 @@ async function handleParse() {
         body: JSON.stringify({ content: combinedContent }),
       });
 
+
       if (!deadlinesRes.ok) throw new Error("Failed to extract deadlines");
       const deadlinesData = await deadlinesRes.json();
       DATES = deadlinesData;
 
+      console.log(deadlinesData);
       // 5. Send combinedContent to Content Extraction API
       const extractRes = await fetch("http://127.0.0.1:5001/api/extractContent", {
         method: "POST",
