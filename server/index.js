@@ -6,6 +6,26 @@ console.log("ENV CHECK MONGO_URI:", process.env.MONGO_URI);
 console.log("ENV CHECK PORT:", process.env.PORT);
 const { jsonrepair } = require("jsonrepair");
 
+// Default difficulty/time estimates by task type when model omits them
+function defaultDifficulty(type = "") {
+  const t = type.toLowerCase();
+  if (/final|exam/.test(t))    return 9;
+  if (/midterm/.test(t))       return 8;
+  if (/project/.test(t))       return 7;
+  if (/quiz/.test(t))          return 5;
+  if (/homework|hw/.test(t))   return 4;
+  return 5;
+}
+function defaultTime(type = "") {
+  const t = type.toLowerCase();
+  if (/final|exam/.test(t))    return 20;
+  if (/midterm/.test(t))       return 15;
+  if (/project/.test(t))       return 12;
+  if (/quiz/.test(t))          return 2;
+  if (/homework|hw/.test(t))   return 4;
+  return 5;
+}
+
 
 const AWSXRay = require('aws-xray-sdk');
 const AWS = AWSXRay.captureAWS(require('aws-sdk')); 
@@ -33,10 +53,7 @@ app.locals.bedrockClient = bedrockClient;
 
 
 // Middleware
-app.use(cors({
-  origin: process.env.FRONTEND_URL,
-  credentials: true,
-}));
+app.use(cors());  // allow all origins in dev
 app.use(express.json());
 
 // Route imports
@@ -495,7 +512,6 @@ app.use(AWSXRay.express.openSegment('NovaAssistantApp'));
 // -------------------- Extract Content Route --------------------
 app.post("/api/extractContent", async (req, res) => {
   const { content } = req.body;
-
   if (!content) return res.status(400).json({ error: "Content is required" });
 
   try {
@@ -507,97 +523,58 @@ app.post("/api/extractContent", async (req, res) => {
         messages: [{
           role: "user",
           content: [{
-            text: `
-   
-    You are an AI teaching assistant.
+            text: `Extract all academic learning content from the course text below.
 
-           Extract **all relevant educational content** from a class syllabus, homework, documentation, or specification PDF.
+RULES:
+- Extract ONLY educational/conceptual content — topics, concepts, explanations.
+- Ignore logistics: office hours, grading, attendance, instructor info, due dates.
+- Output ONLY a raw JSON array. No explanation, no preamble, no markdown, no notes.
+- Start your response with [ and end with ]. Nothing else.
 
-Instructions:
-
-Extract ONLY academic learning content from the syllabus.
-ONLY keep sections that teach/talk about the course concepts
-Ignore administrative or logistics sections such as:
-- instructors
-- TA information
-- office hours
-- grading policies
-- exams
-- discussion sections
-- email policy
-- participation
-- homework policies
-- bonus credit
-- late day policies
-
-1. Identify all **main topics/headers** and **subtopics/subheaders**.  
-2. For each topic or subtopic, extract or infer:
-   - **Header** (required)
-   - **Subheaders** (optional)
-   - **Questions**: Learning questions students should be able to answer (required)
-   - **Content**: Detailed explanation or explanations (required)
-   - **Summary**: Brief summary of key points (required)
-   - **AI_estimateDifficulty**: (Integer 1-10) Rate how complex this specific topic is to master.
-   - **AI_estimateTime**: (Float/Number) Estimated hours needed to study and understand this specific section.
-
-3. Include **bullet points, examples, or detailed descriptions** if present in the text.  
-4. **Do not miss any details explicitly stated** in the professor's notes, syllabus, or PDF.  
-5. If any field is missing, **infer reasonable content** based on educational knowledge of the topic.    
-6. Important: Return **only JSON**, do **not** include any explanation, commentary, or text outside of the JSON. 
-The output must be directly parseable by JSON.parse().
-
+JSON format — return one object per major topic:
 [
   {
-    "Header": "Main Topic Name",
-    "Subheaders": ["Subtopic 1", "Subtopic 2"],
-    "Questions": ["Question 1", "Question 2"],
-    "Content": "Detailed explanation or content from the document",
-    "Summary": "Brief summary of this topic",
-    "AI_estimateDifficulty": 7,
-    "AI_estimateTime": 3.5
+    "Header": "Topic Name",
+    "Subheaders": ["Subtopic A", "Subtopic B"],
+    "Questions": ["What is X?", "How does Y work?"],
+    "Content": "Detailed explanation of the topic from the text.",
+    "Summary": "1-2 sentence summary of key points."
   }
-  
 ]
-  ARRAY SIZE should BE CONTAINING ONLY ONE OBJECT
 
 COURSE TEXT:
-
 ${content}`
           }]
         }],
-        inferenceConfig: {
-          maxTokens: 1000,
-          temperature: 0.5
-        }
+        inferenceConfig: { maxTokens: 2000, temperature: 0.1 }
       })
     });
 
     const result = await bedrockClient.send(command);
-    const data = JSON.parse(new TextDecoder().decode(result.body));
-
-    let rawContent = data.output.message.content[0].text;
-    const match = rawContent.match(/\{[\s\S]*\}/) || rawContent.match(/\[[\s\S]*\]/);
-    
-    if (!match) {
-      return res.status(500).json({ error: "No JSON found", rawOutput: rawContent });
-    }
-    
-    let jsonBlock = match[0];
-    if (typeof jsonrepair !== 'undefined') {
-        jsonBlock = jsonrepair(jsonBlock);
-    }
+    const data   = JSON.parse(new TextDecoder().decode(result.body));
+    const raw    = data.output.message.content[0].text;
+    console.log("=== RAW CONTENT OUTPUT ===\n", raw.slice(0, 300), "\n==========================");
 
     let parsed;
     try {
-      parsed = JSON.parse(jsonBlock);
+      let cleaned = raw.replace(/```(?:json)?\s*/gi, "").replace(/```/g, "");
+      const start = cleaned.indexOf("[");
+      const end   = cleaned.lastIndexOf("]");
+      if (start === -1 || end === -1 || end < start) throw new Error("No JSON array in response");
+      let jsonStr = cleaned.slice(start, end + 1).replace(/,\s*([\]}])/g, "$1");
+      parsed = JSON.parse(jsonStr);
     } catch (e) {
-      return res.status(500).json({ error: "Model did not return valid JSON", rawOutput: rawContent });
+      console.error("extractContent parse error:", e.message, "\nRaw:", raw);
+      return res.status(500).json({ error: "Model did not return valid JSON", rawOutput: raw });
+    }
+
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      return res.status(500).json({ error: "No content extracted", rawOutput: raw });
     }
 
     res.json(parsed);
-    console.log(parsed);
   } catch (err) {
-    console.error(err);
+    console.error("extractContent error:", err);
     res.status(500).json({ error: "Extracting Content Failed" });
   }
 });
@@ -605,7 +582,6 @@ ${content}`
 // -------------------- Extract Questions Route --------------------
 app.post("/api/extractQuestions", async (req, res) => {
   const { content } = req.body;
-
   if (!content) return res.status(400).json({ error: "Content is required" });
 
   try {
@@ -617,40 +593,30 @@ app.post("/api/extractQuestions", async (req, res) => {
         messages: [{
           role: "user",
           content: [{
-            text: `
-### TASK:
-Analyze the course content and generate 10 conceptual multiple-choice academical questions + 2 Meta_Questions (MCQs).
+            text: `Generate questions from the course content below.
 
-### GUIDELINES:
-1. Identify main academic concepts and infer related subtopics.
-2. Questions must test conceptual understanding, NOT logistics (dates, grading, etc.).
-3. Generate 8 academic MCQs.
-4. APPEND exactly 2 Meta-Questions at the end:
-   - "How confident are you in your understanding of this topic?" 
-     Options: ["Very confident", "Somewhat confident", "Neutral", "Not very confident", "Unsure"]
-     Type: "confidence"
-   - "How much more time do you think you need to master this content?"
-     Options: ["I have mastered it", "Need a quick review", "Need enough time for homework", "Need significant study time"]
-     Type: "time_estimation"
+RULES:
+- Output ONLY a raw JSON object. No explanation, no preamble, no notes, no markdown.
+- Start your response with { and end with }. Nothing else.
+- Generate exactly 8 academic MCQs testing conceptual understanding (NOT logistics/dates/grading).
+- Then add exactly 2 meta-questions at the end:
+  1. Confidence: "How confident are you in your understanding of this topic?"
+     options: ["Very confident","Somewhat confident","Neutral","Not very confident","Unsure"]
+     type: "confidence", answer: "NONE"
+  2. Time: "How much more time do you think you need to master this content?"
+     options: ["I have mastered it","Need a quick review","Need enough time for homework","Need significant study time"]
+     type: "time_estimation", answer: "NONE"
 
-### FORMATTING RULES:
-- Return ONLY valid JSON. No introductory text.
-- No trailing commas.
-- Start with { and end with }.
-- Use "type": "mcq" for academic questions and "type": "confidence" or "time_estimation" for meta-questions.
-- For meta-questions, set "answer" to "NONE".
-
-### JSON STRUCTURE:
+JSON format:
 {
   "topics": ["Topic 1", "Topic 2"],
   "questions": [
     {
-      "question": "Example Question?",
-      "options": ["Option A", "Option B", "Option C"],
+      "question": "Question text?",
+      "options": ["A", "B", "C", "D"],
       "type": "mcq",
-      "answer": "Option A"
-    },
-    ...
+      "answer": "A"
+    }
   ]
 }
 
@@ -658,32 +624,35 @@ COURSE CONTENT:
 ${content}`
           }]
         }],
-        inferenceConfig: {
-          maxTokens: 3000, 
-          temperature: 0.1 // Keep it low for structural reliability
-        }
+        inferenceConfig: { maxTokens: 3000, temperature: 0.1 }
       })
     });
 
-    const result = await bedrockClient.send(command);
-    const data = JSON.parse(new TextDecoder().decode(result.body));
-    const content_new = data.output.message.content[0].text;
+    const result  = await bedrockClient.send(command);
+    const data    = JSON.parse(new TextDecoder().decode(result.body));
+    const raw     = data.output.message.content[0].text;
+    console.log("=== RAW QUESTIONS OUTPUT ===\n", raw.slice(0, 300), "\n============================");
 
-    if (!content_new) throw new Error("Empty model response");
+    let parsed;
+    try {
+      let cleaned = raw.replace(/```(?:json)?\s*/gi, "").replace(/```/g, "");
+      const start = cleaned.indexOf("{");
+      const end   = cleaned.lastIndexOf("}");
+      if (start === -1 || end === -1 || end < start) throw new Error("No JSON object in response");
+      let jsonStr = cleaned.slice(start, end + 1).replace(/,\s*([\]}])/g, "$1");
+      parsed = JSON.parse(jsonStr);
+    } catch (e) {
+      console.error("extractQuestions parse error:", e.message, "\nRaw:", raw);
+      return res.status(500).json({ error: "Model did not return valid JSON", rawOutput: raw });
+    }
 
-    const jsonMatch = content_new.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("No JSON structure found");
+    if (!parsed.questions || !Array.isArray(parsed.questions)) {
+      return res.status(500).json({ error: "No questions in response", rawOutput: raw });
+    }
 
-    let jsonString = jsonMatch[0];
-    
-    // Fix common trailing comma issues automatically
-    jsonString = jsonString.replace(/,\s*([\]}])/g, '$1');
-
-    const parsed = JSON.parse(jsonString);
     res.json(parsed);
-
   } catch (err) {
-    console.error("Questions Error:", err);
+    console.error("extractQuestions error:", err);
     res.status(500).json({ error: "Extracting Questions Failed" });
   }
 });
@@ -702,43 +671,43 @@ app.post("/api/extractDeadlines", async (req, res) => {
       contentType: "application/json",
       accept: "application/json",
       body: JSON.stringify({
-        messages: [{
-          role: "user",
-          content: [{
-            text: `
+        messages: [
+          {
+            role: "user",
+            content: [{
+              text: `Extract all academic deadlines from the syllabus text below.
 
+RULES:
+- Include only items with a specific date (Homework, Midterm, Final Exam, Project, Quiz).
+- Ignore office hours, grading policies, attendance, and logistics.
+- Output ONLY a raw JSON array. No explanation, no preamble, no notes, no markdown.
+- Start your response with [ and end with ]. Nothing else.
+- If no deadlines found, return [].
 
-### INSTRUCTIONS:
-
-
-Extract all academic deadlines from this syllabus under TEXT: .
-Only include items that have an actual date or deadline.  
-- Classify each deadline as one of the following types:  
-  - Midterm  
-  - Final Exam  
-  - Project  
-  - Homework  
-  - Quiz  
-
-Do NOT include anything else — ignore all administrative, logistical, or non-academic text.  
-Return ONLY valid JSON in this format:
-
+JSON format:
 [
   {
     "type": "Midterm",
     "date": "2026-02-10",
     "time": "2:00pm",
-    "description": "Midterm exam"
+    "description": "Midterm exam",
+    "AI_estimateDifficulty": 7,
+    "AI_estimateTime": 10.0
   }
 ]
 
-TEXT: 
+For each item also include:
+- "AI_estimateDifficulty": integer 1-10 based on task type and subject complexity
+- "AI_estimateTime": float hours a typical student would need
+
+SYLLABUS TEXT:
 ${content}`
-          }]
-        }],
+            }]
+          }
+        ],
         inferenceConfig: {
-          maxTokens: 2000, // Increased slightly to handle larger syllabi
-          temperature: 0.5 // Lowered for more consistent JSON structure
+          maxTokens: 2000,
+          temperature: 0.1
         }
       })
     });
@@ -750,23 +719,24 @@ ${content}`
     console.log("=== RAW DEADLINES MODEL OUTPUT ===\n", raw, "\n==================================");
 
     let parsed;
-
     try {
-      // Strip markdown code fences if model wraps output
-      const stripped = raw.replace(/```(?:json)?\s*/gi, "").replace(/```/g, "").trim();
-      const jsonMatch = stripped.match(/\[[\s\S]*\]/);
-      let jsonString = jsonMatch ? jsonMatch[0] : stripped;
-      
-      // Safety: Remove trailing commas before closing brackets/braces
-      jsonString = jsonString.replace(/,\s*([\]}])/g, '$1');
-      
+      // Strip markdown fences
+      let cleaned = raw.replace(/```(?:json)?\s*/gi, "").replace(/```/g, "");
+      // Isolate just the JSON array — everything from first [ to last ]
+      const start = cleaned.indexOf("[");
+      const end   = cleaned.lastIndexOf("]");
+      if (start === -1 || end === -1 || end < start) {
+        throw new Error("No JSON array found in response");
+      }
+      let jsonString = cleaned.slice(start, end + 1);
+      // Remove trailing commas before ] or }
+      jsonString = jsonString.replace(/,\s*([\]}])/g, "$1");
       parsed = JSON.parse(jsonString);
-
     } catch (e) {
-      console.error("JSON Parse Error. Raw output:", raw);
+      console.error("JSON Parse Error:", e.message, "\nRaw:", raw);
       return res.status(500).json({ error: "Model did not return valid JSON", rawOutput: raw });
     }
-if (parsed.length === 0) {
+    if (!Array.isArray(parsed) || parsed.length === 0) {
       parsed = [{
         type: "General Study",
         date: "2026-12-31",
@@ -775,6 +745,13 @@ if (parsed.length === 0) {
         AI_estimateDifficulty: 5,
         AI_estimateTime: 10.0
       }];
+    } else {
+      // Fill in missing AI fields with sensible defaults
+      parsed = parsed.map(item => ({
+        ...item,
+        AI_estimateDifficulty: item.AI_estimateDifficulty ?? defaultDifficulty(item.type),
+        AI_estimateTime:       item.AI_estimateTime       ?? defaultTime(item.type),
+      }));
     }
     
 
