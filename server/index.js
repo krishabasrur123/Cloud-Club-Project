@@ -691,14 +691,10 @@ ${content}`
 
 app.post("/api/extractDeadlines", async (req, res) => {
   console.log("=== extractDeadlines HIT ===");
-  console.log(req.body);
 
   try {
     // existing code
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: e.message });
-  }
+  
 });
 
 // -------------------- Extract Deadlines Route --------------------
@@ -791,9 +787,9 @@ if (parsed.length === 0) {
 
 
     res.json(parsed);
-  } catch (err) {
-    console.error("Bedrock API Error:", err);
-    res.status(500).json({ error: "Extracting Deadlines Failed" });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
   }
 });
 
