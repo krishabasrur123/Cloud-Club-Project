@@ -1,148 +1,308 @@
-.dashWrap{
-  width: min(1100px, 94vw);
-  margin: 80px auto 40px;
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 22px;
+/* ── shell ───────────────────────────────────────────────────────────────── */
+.dashShell {
+  width: min(1200px, 94vw);
+  margin: 90px auto 60px;
   position: relative;
   z-index: 3;
 }
 
-.col{
-  background: rgba(201,241,255,0.95);
-  border: 1px solid rgba(0,0,0,0.14);
-  border-radius: 18px;
-  padding: 14px;
-  box-shadow: 0 14px 35px rgba(0,0,0,0.12);
-}
-
-.colHeader{
-  padding: 4px 8px 10px;
-}
-
-.colTitle{
-  font-weight: 900;
-  font-size: 18px;
-  color: rgba(0,0,0,0.78);
+/* ── toolbar ─────────────────────────────────────────────────────────────── */
+.dashToolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
 }
 
-.play{ font-size: 14px; opacity: 0.85; }
+/* date picker */
+.datePickerWrap { position: relative; }
 
-.sortRow{
-  margin-top: 8px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.sortChip{
-  flex: 1;
-  padding: 6px 10px;
+.datePickerBtn {
+  padding: 9px 18px;
   border-radius: 999px;
-  background: rgba(47,149,181,0.35);
-  border: 1px solid rgba(0,0,0,0.10);
-  font-weight: 800;
-  font-size: 11px;
-}
-
-.sortSelect{
-  padding: 6px 10px;
-  border-radius: 10px;
   border: 1px solid rgba(0,0,0,0.14);
-  background: rgba(255,255,255,0.75);
+  background: rgba(255,255,255,0.80);
   font-weight: 800;
-  font-size: 11px;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.10);
+  transition: transform 0.12s;
 }
+.datePickerBtn:hover { transform: translateY(-1px); }
 
-.colBody{
-  display: grid;
-  gap: 14px;
-  padding: 6px 8px 10px;
-}
-
-.card{
+.datePickerDrop {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 100;
+  background: rgba(235,250,255,0.98);
+  border: 1px solid rgba(0,0,0,0.14);
   border-radius: 18px;
-  padding: 14px;
-  border: 1px solid rgba(0,0,0,0.10);
+  box-shadow: 0 22px 55px rgba(0,0,0,0.18);
+  padding: 16px;
+  min-width: 260px;
 }
 
-.tasks .card{ background: rgba(210,214,245,0.65); }
-.progress .card{ background: rgba(242,241,196,0.65); }
-.done .card{ background: rgba(202,245,201,0.65); }
-
-.cardTitle{
-  font-weight: 900;
-  font-size: 12px;
-  margin-bottom: 4px;
-}
-
-.cardDesc{
+.datePickerHint {
   font-size: 11px;
   font-weight: 700;
-  color: rgba(0,0,0,0.55);
+  color: rgba(0,0,0,0.45);
+  text-align: center;
+  margin-top: 8px;
+}
+
+/* mini calendar */
+.miniCal { user-select: none; }
+
+.miniCalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 10px;
 }
 
-.progressRow{
+.miniCalTitle {
+  font-weight: 900;
+  font-size: 13px;
+}
+
+.miniCalNav {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: rgba(45,125,160,0.9);
+  padding: 2px 6px;
+  border-radius: 8px;
+}
+.miniCalNav:hover { background: rgba(45,125,160,0.12); }
+
+.miniCalGrid {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.miniCalWd {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 900;
+  color: rgba(0,0,0,0.45);
+  padding: 4px 0;
+}
+
+.miniCalDay {
+  all: unset;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  color: rgba(0,0,0,0.75);
+  transition: background 0.1s;
+}
+.miniCalDay:hover  { background: rgba(45,125,160,0.15); }
+.miniCalDay.today  { color: rgba(45,125,160,1); font-weight: 900; }
+.miniCalDay.sel    { background: rgba(45,125,160,0.85); color: #fff; border-radius: 8px; }
+
+/* sort pills */
+.sortWrap {
+  display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
+  flex-wrap: wrap;
 }
 
-.progressLabel{
-  font-size: 9px;
-  font-weight: 900;
+.sortLabel {
+  font-size: 12px;
+  font-weight: 800;
   color: rgba(0,0,0,0.55);
 }
 
-.dots{
-  display: flex;
-  gap: 4px;
+.sortPill {
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,0.14);
+  background: rgba(255,255,255,0.70);
+  font-weight: 800;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.12s, transform 0.1s;
+}
+.sortPill:hover  { transform: translateY(-1px); }
+.sortPill.active {
+  background: rgba(45,125,160,0.85);
+  color: #fff;
+  border-color: transparent;
 }
 
-.dot{
+/* ── block grid ──────────────────────────────────────────────────────────── */
+.blockGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 18px;
+}
+
+.dashEmpty {
+  text-align: center;
+  padding: 60px 20px;
+  font-weight: 700;
+  font-size: 15px;
+  color: rgba(0,0,0,0.45);
+}
+
+/* ── session card ────────────────────────────────────────────────────────── */
+.sessionCard {
+  border-radius: 18px;
+  padding: 16px 18px;
+  border: 1px solid rgba(0,0,0,0.10);
+  box-shadow: 0 10px 28px rgba(0,0,0,0.10);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* priority tints */
+.priHigh { background: rgba(255,210,220,0.80); }
+.priMed  { background: rgba(228,210,255,0.80); }
+.priLow  { background: rgba(205,255,205,0.80); }
+
+.scTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.scTitle {
+  font-weight: 900;
+  font-size: 14px;
+  color: rgba(0,0,0,0.82);
+  flex: 1;
+  line-height: 1.3;
+}
+
+.scTag {
+  font-size: 10px;
+  font-weight: 900;
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.tagStudy { background: rgba(45,125,160,0.18); color: rgba(20,80,110,0.9); }
+.tagDue   { background: rgba(220,60,60,0.18);  color: rgba(160,20,20,0.9); }
+
+.scMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(0,0,0,0.60);
+  flex-wrap: wrap;
+}
+
+.scType {
+  background: rgba(0,0,0,0.08);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+.scFlag {
+  color: #b45309;
+  font-weight: 900;
+  font-size: 11px;
+}
+
+.scDue {
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(0,0,0,0.50);
+}
+
+/* progress dots (reuse from old dashboard) */
+.scProgress {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.scProgLabel {
+  font-size: 9px;
+  font-weight: 900;
+  color: rgba(0,0,0,0.45);
+  letter-spacing: 0.05em;
+}
+
+.scDots { display: flex; gap: 4px; }
+
+.dot {
   width: 7px;
   height: 7px;
   border-radius: 999px;
   background: rgba(0,0,0,0.15);
 }
-.dot.on{ background: rgba(31,109,138,0.85); }
+.dot.on { background: rgba(31,109,138,0.85); }
 
-.pct{
+.scPct {
   font-size: 10px;
   font-weight: 900;
-  color: rgba(0,0,0,0.55);
+  color: rgba(0,0,0,0.50);
 }
 
-.cardMeta{
-  font-size: 10px;
-  font-weight: 800;
-  color: rgba(0,0,0,0.55);
-}
-
-.moveRow{
+.scScores {
   display: flex;
-  gap: 6px;
+  gap: 12px;
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(0,0,0,0.50);
+}
+
+.miniCalFooter {
   margin-top: 10px;
+  display: flex;
+  justify-content: center;
 }
 
-.miniBtn{
-  flex: 1;
-  border: none;
-  border-radius: 10px;
-  padding: 6px 8px;
-  background: rgba(255,255,255,0.55);
-  font-weight: 900;
-  font-size: 10px;
+.miniCalClear {
+  all: unset;
   cursor: pointer;
-  border: 1px solid rgba(0,0,0,0.10);
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(45,125,160,0.9);
+  padding: 5px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(45,125,160,0.35);
+  transition: background 0.12s;
+}
+.miniCalClear:hover { background: rgba(45,125,160,0.10); }
+
+.taskCount {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(0,0,0,0.45);
 }
 
-@media (max-width: 980px){
-  .dashWrap{ grid-template-columns: 1fr; }
+.calEmpty {
+  text-align: center;
+  padding: 30px;
+  font-weight: 700;
+  color: rgba(0,0,0,0.45);
+  font-size: 14px;
+}
+
+.calLegCount {
+  margin-left: auto;
+  background: rgba(45,125,160,0.15);
+  color: rgba(45,125,160,0.95);
+}
+
+@media (max-width: 700px) {
+  .dashToolbar { flex-direction: column; align-items: flex-start; }
+  .blockGrid   { grid-template-columns: 1fr; }
+  .taskCount   { margin-left: 0; }
 }

@@ -19,10 +19,17 @@ const bedrockClient = AWSXRay.captureAWSv3Client(
   new BedrockRuntimeClient({ region: process.env.AWS_REGION })
 );
 
+// Make bedrockClient available to route files via app.locals
+// (app is defined below — we attach after app = express())
+
+
 AWSXRay.enableAutomaticMode(); // or enableManualMode() if you want manual segments
 
 const fs = require("fs");
 const app = express();
+
+// Expose bedrockClient to all route handlers via app.locals
+app.locals.bedrockClient = bedrockClient;
 
 
 // Middleware
@@ -35,6 +42,9 @@ app.use("/api/users", userRoutes);
 
 const taskRoutes = require("./routes/taskRoutes");
 app.use("/api/tasks", taskRoutes);
+
+const scheduleRoutes = require("./routes/scheduleRoutes");
+app.use("/api/schedule", scheduleRoutes);
 
 // Test route
 app.get("/", (req, res) => {

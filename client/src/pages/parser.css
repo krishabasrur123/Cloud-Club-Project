@@ -194,3 +194,24 @@
     padding: 34px 26px;
   }
 }
+
+/* parsed task meta — inline chips */
+.parsedMeta{
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(31,42,55,0.60);
+}
+
+.parsedTag{
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: rgba(45,125,160,0.15);
+  color: rgba(45,125,160,0.95);
+  font-size: 12px;
+  font-weight: 800;
+}

@@ -6,18 +6,29 @@ import Dashboard from "./pages/Dashboard.jsx";
 import Calendar from "./pages/Calendar.jsx";
 
 function ProtectedRoute({ children }) {
-  const loggedIn = localStorage.getItem("token"); 
+  const loggedIn = !!localStorage.getItem("token");
   return loggedIn ? children : <Navigate to="/auth" replace />;
+}
+
+// Redirect already-logged-in users away from auth pages
+function PublicRoute({ children }) {
+  const loggedIn = !!localStorage.getItem("token");
+  return loggedIn ? <Navigate to="/dashboard" replace /> : children;
+}
+
+function RootRedirect() {
+  const loggedIn = !!localStorage.getItem("token");
+  return <Navigate to={loggedIn ? "/dashboard" : "/auth"} replace />;
 }
 
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/auth" replace />} />
+      <Route path="/" element={<RootRedirect />} />
 
-      {/* public pages */}
-      <Route path="/auth" element={<Auth />} />
-      <Route path="/signup" element={<Signup />} />
+      {/* public pages — redirect away if already logged in */}
+      <Route path="/auth"   element={<PublicRoute><Auth /></PublicRoute>} />
+      <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
 
       {/* protected pages */}
       <Route

@@ -1,5 +1,4 @@
-// client/src/pages/Parser.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import "./auth.css";
@@ -11,29 +10,17 @@ import lightbulb from "../assets/light.png";
 import clock from "../assets/clock.png";
 
 import QuestionModal from "../components/QuestionModal.jsx";
+import pdfToText from "react-pdftotext";
+import { appendScheduledTasks } from "../lib/scheduledStore.js";
 
-
-import pdfToText from 'react-pdftotext';
-
-
-
-// Usage
-
-// Parser.jsx
-
-
-const MAX_MB = 20;
-const ACCEPT_EXT = ["pdf", "pptx", "txt"];
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function getExt(file) {
   let name = "";
-  if (typeof file === "string") {
-    name = file;
-  } else if (file?.name) {
-    name = file.name;
-  } else if (file?.originalname) {
-    name = file.originalname;
-  }
+  if (typeof file === "string") name = file;
+  else if (file?.name) name = file.name;
   if (!name) return "";
   const parts = name.split(".");
   return parts.length > 1 ? parts.pop().toLowerCase() : "";
@@ -41,169 +28,150 @@ function getExt(file) {
 
 export async function loadFileContent(file) {
   const ext = getExt(file);
-  let docs = "";
-
   if (ext === "pdf") {
-    try {
-      docs = await pdfToText(file);
-    } catch (err) {
-      console.error("Failed to extract text from pdf", err);
-    }
-  } 
-  // ADD THIS: Handle plain text files
-  else if (ext === "txt") {
-    docs = await file.text(); 
+    try { return await pdfToText(file); } catch (err) { console.error("PDF parse error", err); }
+  } else if (ext === "txt") {
+    return await file.text();
   }
-
-  return docs;
+  return "";
 }
 
-const MOCK_QUESTIONS = [
+/** Format a YYYY-MM-DD string to "Month DD, YYYY" for display */
+function formatDisplayDate(ymd) {
+  if (!ymd) return "";
+  const [y, m, d] = ymd.split("-").map(Number);
+  if (!y || !m || !d) return ymd;
+  const months = ["January","February","March","April","May","June",
+                  "July","August","September","October","November","December"];
+  return `${months[m - 1]} ${d}, ${y}`;
+}
 
-];
-
-let DATES =[];
-let EXTARCTED_CONTENT=[];
-
-
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
 export default function Parser() {
-
-  const [qIndex, setQIndex] = useState(0);
-  const [answers, setAnswers] = useState({});
   const navigate = useNavigate();
-  const [questions, setQuestions] = useState([]);
 
-
-  const [questionOpen, setQuestionOpen] = useState(false);
-
+  // --- parse state ---
   const [file, setFile] = useState(null);
   const [rawText, setRawText] = useState("");
-  const [parsed, setParsed] = useState([]); // [{title, due, course, priority, notes}]
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // --- extracted data (kept in refs so QuestionModal close handler can read them) ---
+  const datesRef = useRef([]);        // raw tasks from extractDeadlines
+  const extractedContentRef = useRef([]);
+
+  // --- parsed task cards shown in the right panel ---
+  // Each item: { id, title, type, syllabusDueDate (YYYY-MM-DD), aiDifficulty, aiEstimatedTime }
+  const [parsedTasks, setParsedTasks] = useState([]);
+
+  // --- question modal ---
+  const [questions, setQuestions] = useState([]);   // [{title, prompt, options, answer, type}]
+  const [qIndex, setQIndex] = useState(0);
+  const [answers, setAnswers] = useState({});        // { "0": "Option A", ... }
+  const [questionOpen, setQuestionOpen] = useState(false);
+
+  // --- scheduling ---
+  const [scheduling, setScheduling] = useState(false);
+  const [questionsComplete, setQuestionsComplete] = useState(false);
+
+  // Redirect if not logged in
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) navigate("/auth");
+    if (!localStorage.getItem("token")) navigate("/auth");
   }, [navigate]);
 
-
+  // Open question modal once questions arrive
   useEffect(() => {
-  if (questions.length > 0) {
-    console.log("Questions updated:", questions);
+    if (questions.length > 0) {
+      setQIndex(0);
+      setAnswers({});
+      setQuestionsComplete(false);
+      setQuestionOpen(true);
+    }
+  }, [questions]);
 
-    setQIndex(0);
-    setAnswers({});
-    setQuestionOpen(true);
-  }
-}, [questions]);
-
-
-
-async function handleParse() {
+  // ---------------------------------------------------------------------------
+  // Parse handler
+  // ---------------------------------------------------------------------------
+  async function handleParse() {
     setError("");
     setLoading(true);
+    setQuestionsComplete(false);
 
     try {
-      // 1. Check if we have any input at all
-      if (!rawText.trim() && !file) {
-        throw new Error("Add text or upload a file first.");
-      }
+      if (!rawText.trim() && !file) throw new Error("Add text or upload a file first.");
 
-      // 2. Extract PDF text if a file exists
       let pdfText = "";
-      if (file) {
-        pdfText = await loadFileContent(file);
-      }
+      if (file) pdfText = await loadFileContent(file);
 
-      // 3. Combine PDF text and TextArea text
-      // We use .filter(Boolean) to make sure we don't add extra newlines if one is empty
-      const combinedContent = [pdfText, rawText.trim()]
-        .filter(Boolean)
-        .join("\n\n---\n\n"); 
+      const combinedContent = [pdfText, rawText.trim()].filter(Boolean).join("\n\n---\n\n");
 
-      console.log("Combined Content for API:", combinedContent);
-
-      // 4. Send combinedContent to Deadlines API
+      // 1. Extract deadlines
       const deadlinesRes = await fetch("http://127.0.0.1:5001/api/extractDeadlines", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: combinedContent }),
       });
-
-
       if (!deadlinesRes.ok) throw new Error("Failed to extract deadlines");
       const deadlinesData = await deadlinesRes.json();
-      DATES = deadlinesData;
+      datesRef.current = deadlinesData;
+      console.log("Extracted deadlines:", deadlinesData);
 
-      console.log(deadlinesData);
-      // 5. Send combinedContent to Content Extraction API
+      // Build parsed task cards from deadlines
+      const taskCards = deadlinesData.map((t, i) => ({
+        id: `t_${i}`,
+        title: t.description || t.type || `Task ${i + 1}`,
+        type: t.type,
+        syllabusDueDate: t.date,
+        aiDifficulty: t.AI_estimateDifficulty,
+        aiEstimatedTime: t.AI_estimateTime,
+      }));
+      setParsedTasks(taskCards);
+
+      // 2. Extract content
       const extractRes = await fetch("http://127.0.0.1:5001/api/extractContent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: combinedContent }),
       });
-
       if (!extractRes.ok) throw new Error("Failed to extract content");
       const extractedData = await extractRes.json();
-
       if (!extractedData || (Array.isArray(extractedData) && extractedData.length === 0)) {
-        throw new Error("The AI couldn't find any academic content. Try adding more detail to the text box.");
+        throw new Error("The AI couldn't find academic content. Try adding more detail.");
       }
-
       const dataArray = Array.isArray(extractedData) ? extractedData : [extractedData];
-      EXTARCTED_CONTENT = dataArray;
+      extractedContentRef.current = dataArray;
 
-      // Format the extracted content for the Questions API
-      const formattedTextForQuestions = dataArray
-        .map(section => `
-# ${section.Header}
+      // 3. Generate questions from extracted content
+      const formattedForQuestions = dataArray.map(s => `
+# ${s.Header}
 ## Questions
-${(section.Questions || []).map(q => `- ${q}`).join("\n")}
+${(s.Questions || []).map(q => `- ${q}`).join("\n")}
 ## Content
-${section.Content}
+${s.Content}
 ## Summary
-${section.Summary}
-`)
-        .join("\n\n");
+${s.Summary}
+`).join("\n\n");
 
-      // 6. Send formatted text to Questions API
       const questionsRes = await fetch("http://127.0.0.1:5001/api/extractQuestions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: formattedTextForQuestions }),
+        body: JSON.stringify({ content: formattedForQuestions }),
       });
-
       if (!questionsRes.ok) throw new Error("Failed to generate questions");
       const questionsData = await questionsRes.json();
 
-      const formattedQuestions = questionsData.questions.map((q, idx) => ({
+      const formatted = questionsData.questions.map((q, idx) => ({
         title: `Question ${idx + 1}:`,
         prompt: q.question,
         options: q.options,
-        answer: q.answer,
-        type: q.type
+        answer: q.answer,   // correct answer (or "NONE" for meta-questions)
+        type: q.type,       // "mcq" | "confidence" | "time_estimation"
       }));
 
-      setQuestions(formattedQuestions);
-
-      // 7. Update the local "Parsed tasks" list for the UI
-      const lines = combinedContent
-        .split("\n")
-        .map((l) => l.trim())
-        .filter(Boolean);
-
-      const items = lines.slice(0, 10).map((line, i) => ({
-        id: `p_${i}`,
-        title: line.slice(0, 60),
-        course: "",
-        due: "",
-        priority: "Medium",
-        notes: line,
-      }));
-
-      setParsed(items);
+      setQuestions(formatted);
     } catch (e) {
       setError(e.message || "Failed to parse.");
     } finally {
@@ -211,24 +179,94 @@ ${section.Summary}
     }
   }
 
-  function addParsedToDashboardTasks() {
-    const existing = JSON.parse(localStorage.getItem("draft_tasks") || "[]");
-    localStorage.setItem("draft_tasks", JSON.stringify([...parsed, ...existing]));
-    navigate("/dashboard");
+  // ---------------------------------------------------------------------------
+  // Question submit handler
+  // ---------------------------------------------------------------------------
+  function handleQuestionSubmit(selected) {
+    const newAnswers = { ...answers, [qIndex]: selected };
+    setAnswers(newAnswers);
+
+    const next = qIndex + 1;
+    if (next < questions.length) {
+      setQIndex(next);
+    } else {
+      setQuestionOpen(false);
+      setQuestionsComplete(true);  // all questions answered — unlock button
+    }
   }
 
+  // ---------------------------------------------------------------------------
+  // Add to Dashboard — calls /api/schedule, logs to console, does nothing else
+  // ---------------------------------------------------------------------------
+  async function handleAddToDashboard() {
+    if (parsedTasks.length === 0) return;
+    setScheduling(true);
+    setError("");
+
+    try {
+      const token = localStorage.getItem("token");
+      console.log("[schedule] sending", {
+        taskCount: datesRef.current.length,
+        questionCount: questions.length,
+        answerCount: Object.keys(answers).length,
+        hasToken: !!token,
+      });
+      const res = await fetch("http://127.0.0.1:5001/api/schedule", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          tasks: datesRef.current,
+          answers,
+          questions,
+          todayDate: new Date().toISOString(),
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        console.error("[schedule] server error:", err);
+        throw new Error(err.error || `Server returned ${res.status}`);
+      }
+
+      const data = await res.json();
+
+      // Save to shared store so Dashboard + Calendar can read it
+      appendScheduledTasks(data.scheduled);
+
+      // Log each scheduled task as requested
+      console.log("========== SCHEDULED TASKS ==========");
+      data.scheduled.forEach((t) => {
+        console.log("Task:           ", t.title);
+        console.log("Type:           ", t.type);
+        console.log("Syllabus Due:   ", t.syllabusDueDate);
+        console.log("Weighted Score: ", `${Math.round((t.weightedScore ?? 0) * 100)}%`);
+        console.log("Assigned Dates: ", t.assignedDates.join(" → "));
+        console.log("─────────────────────────────────────");
+      });
+      console.log("=====================================");
+
+      // Navigate to dashboard to see the results
+      navigate("/dashboard");
+    } catch (e) {
+      console.error("Schedule error:", e);
+      setError(e.message || "Scheduling failed.");
+    } finally {
+      setScheduling(false);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
   return (
     <div className="authPage">
       <div className="topNav topNavFull">
-        <button className="pill active" onClick={() => navigate("/parser")}>
-          Parser
-        </button>
-        <button className="pill" onClick={() => navigate("/dashboard")}>
-          Dashboard
-        </button>
-        <button className="pill" onClick={() => navigate("/calendar")}>
-          Calendar
-        </button>
+        <button className="pill active" onClick={() => navigate("/parser")}>Parser</button>
+        <button className="pill" onClick={() => navigate("/dashboard")}>Dashboard</button>
+        <button className="pill" onClick={() => navigate("/calendar")}>Calendar</button>
       </div>
 
       <img className="bgIcon bgClipboard" src={clipboard} alt="" />
@@ -237,10 +275,11 @@ ${section.Summary}
       <img className="bgIcon bgClock" src={clock} alt="" />
 
       <div className="parserWrap">
+        {/* ── Left card: input ── */}
         <div className="parserCard">
           <div className="parserTitle">Input content</div>
           <div className="parserSub">
-            Paste deadlines / assignments or upload a file. We’ll convert it into structured tasks.
+            Paste a syllabus or upload a PDF. We'll extract deadlines and generate a study plan.
           </div>
 
           <div className="parserRow">
@@ -248,6 +287,7 @@ ${section.Summary}
             <input
               className="parserFile"
               type="file"
+              accept=".pdf,.txt"
               onChange={(e) => setFile(e.target.files?.[0] || null)}
             />
           </div>
@@ -271,12 +311,7 @@ ${section.Summary}
             </button>
             <button
               className="parserBtn ghost"
-              onClick={() => {
-                setFile(null);
-                setRawText("");
-                setParsed([]);
-                setError("");
-              }}
+              onClick={() => { setFile(null); setRawText(""); setParsedTasks([]); setError(""); }}
               disabled={loading}
             >
               Clear
@@ -284,70 +319,61 @@ ${section.Summary}
           </div>
         </div>
 
+        {/* ── Right card: parsed tasks ── */}
         <div className="parserCard">
           <div className="parserTitle">Parsed tasks</div>
-          <div className="parserSub">Review and send them to your dashboard.</div>
+          <div className="parserSub">
+            Tasks extracted from your syllabus with their due dates.
+          </div>
 
-          {parsed.length === 0 ? (
+          {parsedTasks.length === 0 ? (
             <div className="parserEmpty">Nothing parsed yet.</div>
           ) : (
             <>
               <div className="parsedList">
-                {parsed.map((p) => (
-                  <div key={p.id} className="parsedItem">
+                {parsedTasks.map((t) => (
+                  <div key={t.id} className="parsedItem">
                     <div className="parsedMain">
-                      <div className="parsedName">{p.title}</div>
+                      <div className="parsedName">{t.title}</div>
                       <div className="parsedMeta">
-                        {p.priority ? `Priority: ${p.priority}` : ""}{" "}
-                        {p.due ? `• Due: ${p.due}` : ""}{" "}
-                        {p.course ? `• ${p.course}` : ""}
+                        {t.type && <span className="parsedTag">{t.type}</span>}
+                        {t.syllabusDueDate && (
+                          <span>Due: {formatDisplayDate(t.syllabusDueDate)}</span>
+                        )}
+                        {t.aiDifficulty != null && (
+                          <span>· Difficulty: {t.aiDifficulty}/10</span>
+                        )}
+                        {t.aiEstimatedTime != null && (
+                          <span>· Est. {t.aiEstimatedTime}h</span>
+                        )}
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
 
-              <button className="parserBtn full" onClick={addParsedToDashboardTasks}>
-                Add to Dashboard
+              <button
+                className="parserBtn full"
+                onClick={handleAddToDashboard}
+                disabled={scheduling || !questionsComplete}
+                title={!questionsComplete ? "Answer all questions first" : undefined}
+              >
+                {scheduling ? "Scheduling..." : questionsComplete ? "Add to Dashboard" : "Answer questions first"}
               </button>
             </>
           )}
         </div>
       </div>
 
-    <QuestionModal
-  open={questionOpen}
-  title={questions[qIndex]?.title}
-  question={questions[qIndex]?.prompt}
-  options={questions[qIndex]?.options || []}
-  onClose={() => setQuestionOpen(false)}
-onSubmit={(selected) => {
-  const currentQ = questions[qIndex];
-
-  setAnswers((prev) => {
-    const newAnswers = {
-      ...prev,
-      [qIndex]: selected,
-    };
-
-    console.log("Answer submitted for question", qIndex, ":", selected);
-    console.log("Current answers state:", newAnswers);
-
-    return newAnswers;
-  });
-
-  const next = qIndex + 1;
-
-  if (next < questions.length) {
-    console.log("Moving to next question:", next);
-    setQIndex(next);
-  } else {
-    console.log("All questions answered. Closing modal.");
-    setQuestionOpen(false);
-  }
-}}
-/>
-      
+      {/* Question modal */}
+      <QuestionModal
+        open={questionOpen}
+        title={questions[qIndex]?.title}
+        question={questions[qIndex]?.prompt}
+        options={questions[qIndex]?.options || []}
+        onClose={() => setQuestionOpen(false)}
+        onSubmit={handleQuestionSubmit}
+      />
     </div>
   );
 }
