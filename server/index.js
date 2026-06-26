@@ -33,7 +33,10 @@ app.locals.bedrockClient = bedrockClient;
 
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL,
+  credentials: true,
+}));
 app.use(express.json());
 
 // Route imports
@@ -684,6 +687,20 @@ ${content}`
     res.status(500).json({ error: "Extracting Questions Failed" });
   }
 });
+
+
+app.post("/api/extractDeadlines", async (req, res) => {
+  console.log("=== extractDeadlines HIT ===");
+  console.log(req.body);
+
+  try {
+    // existing code
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // -------------------- Extract Deadlines Route --------------------
 app.post("/api/extractDeadlines", async (req, res) => {
   const { content } = req.body;
