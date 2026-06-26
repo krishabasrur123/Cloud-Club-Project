@@ -689,13 +689,6 @@ ${content}`
 });
 
 
-app.post("/api/extractDeadlines", async (req, res) => {
-  console.log("=== extractDeadlines HIT ===");
-
-  try {
-    // existing code
-  
-});
 
 // -------------------- Extract Deadlines Route --------------------
 app.post("/api/extractDeadlines", async (req, res) => {
@@ -787,7 +780,7 @@ if (parsed.length === 0) {
 
 
     res.json(parsed);
-  } catch (e) {
+  }  catch (e) {
     console.error(e);
     res.status(500).json({ error: e.message });
   }
